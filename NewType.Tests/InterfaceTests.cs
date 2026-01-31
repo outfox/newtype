@@ -1,6 +1,7 @@
-using System;
 using System.Numerics;
 using Xunit;
+
+namespace newtype.tests;
 
 public class InterfaceTests
 {
@@ -8,7 +9,7 @@ public class InterfaceTests
     public void IEquatable_IsImplemented()
     {
         Position p = new Vector3(1, 2, 3);
-        Assert.IsAssignableFrom<IEquatable<Position>>(p);
+        Assert.IsType<IEquatable<Position>>(p, exactMatch: false);
     }
 
     [Fact]
@@ -31,14 +32,14 @@ public class InterfaceTests
     public void IFormattable_IsImplemented()
     {
         Position p = new Vector3(1, 2, 3);
-        Assert.IsAssignableFrom<IFormattable>(p);
+        Assert.IsType<IFormattable>(p, exactMatch: false);
     }
 
     [Fact]
     public void IFormattable_ToString_WithFormat()
     {
         Position p = new Vector3(1.5f, 2.5f, 3.5f);
-        var formatted = ((IFormattable)p).ToString("F1", null);
+        var formatted = p.ToString("F1", null);
         Assert.NotNull(formatted);
         Assert.Contains("1.5", formatted);
     }

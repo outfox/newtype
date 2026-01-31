@@ -25,7 +25,7 @@
     <IncludeBuildOutput>false</IncludeBuildOutput>
     <DevelopmentDependency>true</DevelopmentDependency>
     <NoWarn>$(NoWarn);NU5128</NoWarn>
-    <RootNamespace>TypeAlias.Generator</RootNamespace>
+    <RootNamespace>newtype.generator</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
