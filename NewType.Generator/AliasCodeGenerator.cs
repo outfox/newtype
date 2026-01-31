@@ -150,6 +150,13 @@ internal class AliasCodeGenerator
         _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
         _sb.AppendLine($"{indent}public {_structName}({_aliasedTypeFullName} value) => _value = value;");
         _sb.AppendLine();
+
+        // Forward constructors from the aliased type
+        var forwardable = GetForwardableConstructors();
+        foreach (var ctor in forwardable)
+        {
+            AppendForwardedConstructor(indent, ctor);
+        }
     }
 
     private void AppendValueProperty()
@@ -664,6 +671,144 @@ internal class AliasCodeGenerator
         _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
         _sb.AppendLine($"{indent}public override int GetHashCode() => {hashExpr};");
         _sb.AppendLine();
+    }
+
+    /// <summary>
+    /// Discovers public instance constructors on the aliased type that should be forwarded.
+    /// Filters out: parameterless, single-param-of-aliased-type (already generated),
+    /// implicitly declared, and any that conflict with user-defined constructors on the partial struct.
+    /// </summary>
+    private IReadOnlyList<IMethodSymbol> GetForwardableConstructors()
+    {
+        var userSignatures = GetUserDefinedConstructorSignatures();
+
+        return _alias.AliasedType.GetMembers()
+            .OfType<IMethodSymbol>()
+            .Where(m => m.MethodKind == MethodKind.Constructor
+                        && !m.IsStatic
+                        && m.DeclaredAccessibility == Accessibility.Public
+                        && !m.IsImplicitlyDeclared
+                        && m.Parameters.Length > 0)
+            .Where(m =>
+            {
+                // Skip copy constructor (single param of the aliased type itself)
+                if (m.Parameters.Length == 1 &&
+                    SymbolEqualityComparer.Default.Equals(m.Parameters[0].Type, _alias.AliasedType))
+                    return false;
+
+                // Skip constructors with pointer parameters (require unsafe context)
+                if (m.Parameters.Any(p => p.Type.TypeKind == TypeKind.Pointer))
+                    return false;
+
+                // Skip if user already defined a constructor with the same signature
+                var sig = GetConstructorSignature(m);
+                return !userSignatures.Contains(sig);
+            })
+            .ToList();
+    }
+
+    private void AppendForwardedConstructor(string indent, IMethodSymbol ctor)
+    {
+        var parameters = FormatConstructorParameters(ctor);
+        var arguments = FormatConstructorArguments(ctor);
+
+        _sb.AppendLine($"{indent}/// <summary>Forwards {_aliasedTypeName} constructor.</summary>");
+        _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
+        _sb.AppendLine($"{indent}public {_structName}({parameters}) => _value = new {_aliasedTypeFullName}({arguments});");
+        _sb.AppendLine();
+    }
+
+    private string FormatConstructorParameters(IMethodSymbol ctor)
+    {
+        return string.Join(", ", ctor.Parameters.Select(p =>
+        {
+            var typeStr = p.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+
+            var refKind = p.RefKind switch
+            {
+                RefKind.Ref => "ref ",
+                RefKind.Out => "out ",
+                RefKind.In => "in ",
+                _ => ""
+            };
+
+            var paramsKeyword = p.IsParams ? "params " : "";
+
+            var defaultValue = p.HasExplicitDefaultValue
+                ? $" = {FormatDefaultValue(p)}"
+                : "";
+
+            return $"{paramsKeyword}{refKind}{typeStr} {p.Name}{defaultValue}";
+        }));
+    }
+
+    private static string FormatConstructorArguments(IMethodSymbol ctor)
+    {
+        return string.Join(", ", ctor.Parameters.Select(p =>
+        {
+            var refKind = p.RefKind switch
+            {
+                RefKind.Ref => "ref ",
+                RefKind.Out => "out ",
+                RefKind.In => "in ",
+                _ => ""
+            };
+            return $"{refKind}{p.Name}";
+        }));
+    }
+
+    private static string FormatDefaultValue(IParameterSymbol param)
+    {
+        var value = param.ExplicitDefaultValue;
+
+        if (value is null)
+            return "default";
+
+        if (value is string s)
+            return $"\"{s.Replace("\\", "\\\\").Replace("\"", "\\\"")}\"";
+
+        if (value is char c)
+            return $"'{c}'";
+
+        if (value is bool b)
+            return b ? "true" : "false";
+
+        if (value is float f)
+            return f.ToString("R") + "f";
+
+        if (value is double d)
+            return d.ToString("R") + "d";
+
+        if (value is decimal m)
+            return m.ToString() + "m";
+
+        return value.ToString();
+    }
+
+    /// <summary>
+    /// Gets signatures of constructors the user has explicitly defined on the partial struct,
+    /// so we can avoid generating conflicting constructors.
+    /// </summary>
+    private HashSet<string> GetUserDefinedConstructorSignatures()
+    {
+        var signatures = new HashSet<string>();
+        foreach (var member in _alias.StructSymbol.GetMembers())
+        {
+            if (member is IMethodSymbol {MethodKind: MethodKind.Constructor, IsImplicitlyDeclared: false} ctor)
+            {
+                signatures.Add(GetConstructorSignature(ctor));
+            }
+        }
+        return signatures;
+    }
+
+    /// <summary>
+    /// Creates a normalized signature string from a constructor's parameter types for comparison.
+    /// </summary>
+    private static string GetConstructorSignature(IMethodSymbol ctor)
+    {
+        return string.Join(",", ctor.Parameters.Select(p =>
+            p.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)));
     }
 
     private string GetMemberIndent() => string.IsNullOrEmpty(_namespace) ? "    " : "        ";

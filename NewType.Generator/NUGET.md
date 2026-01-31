@@ -67,6 +67,7 @@ For each `[newtype<T>]` decorated struct, the generator creates:
 - `private readonly T _value` - The backing field
 - `public T Value { get; }` - Property to access the value
 - Constructor from `T`
+- Forwarded constructors from `T` (e.g., `new Position(1, 2, 3)` instead of `new Position(new Vector3(1, 2, 3))`)
 
 ### Conversions
 
@@ -103,7 +104,8 @@ For each `[newtype<T>]` decorated struct, the generator creates:
 This generator uses **implicit conversion** both ways. This means:
 
 ```csharp
-Position p = new Vector3(1, 2, 3);  // ✓ Works
+Position p = new Vector3(1, 2, 3);  // ✓ Works (implicit conversion)
+Position q = new Position(1, 2, 3); // ✓ Works (forwarded constructor)
 Vector3 v = p;                       // ✓ Works
 Position p2 = p + velocity;          // ✓ Works (via Vector3 arithmetic)
 ```
