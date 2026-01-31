@@ -3,7 +3,7 @@
 A source generator that creates distinct type aliases with full operator forwarding. Inspired by Haskell's `newtype` and F#'s type abbreviations.
 
 ## Usage
-
+Typical example is different quantities that are backed by the same data type - for instance, forces, velocities, and positions can all be expressed as a Vector3, but are really quite different beasts underneath. Coding patterns such as [Entity-Component Systems](https://fennecs.net) benefit greatly from sleek type forwarding that goes beyond the primitive, identifier aliasing that .NET comes with out of the box.
 ```cs
 using newtype;
 
