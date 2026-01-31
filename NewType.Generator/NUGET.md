@@ -1,20 +1,21 @@
 # `newtype` - Type Aliases for C#
 
-A source generator that creates distinct type aliases with full operator forwarding. Inspired by Haskell's `newtype` and F#'s type abbreviations.
+A source generator that creates distinct type aliases with full operator forwarding. Inspired by Haskell's `newtype` and
+F#'s type abbreviations.
 
 ![logo, a stylized N with a red and Blue half](https://raw.githubusercontent.com/outfox/newtype/main/logo.svg)
 
 `newtype` works for a healthy number of types - many primitives, structs, records, classes work out of the box.
-
 
 ## Installation
 
 > `dotnet add package newtype`
 
 ## Usage
-- Basic: strongly typed `string`-names, `int`-IDs, and `int`-counts
-- Typical: quantities backed by the same data type. For example, forces, velocities, positions, etc. all lose their semantics when expressed as `Vector3`
 
+- Basic: strongly typed `string`-names, `int`-IDs, and `int`-counts
+- Typical: quantities backed by the same data type. For example, forces, velocities, positions, etc. all lose their
+  semantics when expressed as `Vector3`
 
 ```cs
 using newtype;
@@ -45,36 +46,43 @@ Vector3 vec = p;                              // Position → Vector3
 Position pos = new System.Numerics.Vector3(); // Vector3 → Position
 ```
 
-Design patterns such as [Entity-Component Systems](https://github.com/outfox/fennecs) benefit greatly from sleek type forwarding that goes beyond the primitive, identifier aliasing or record-wrapping that C# brings out of the box.
+Design patterns such as [Entity-Component Systems](https://github.com/outfox/fennecs) benefit greatly from sleek type
+forwarding that goes beyond the primitive, identifier aliasing or record-wrapping that C# brings out of the box.
 
 ## What Gets Generated
 
 For each `[newtype<T>]` decorated struct, the generator creates:
 
 ### Core Members
+
 - `private readonly T _value` - The backing field
 - `public T Value { get; }` - Property to access the value
 - Constructor from `T`
 
 ### Conversions
+
 - `implicit operator AliasType(T value)` - Convert from aliased type
 - `implicit operator T(AliasType value)` - Convert to aliased type
 
 ### Operators (forwarded from T)
+
 - All binary operators (`+`, `-`, `*`, `/`, `%`, etc.)
 - All unary operators (`-`, `+`, `!`, `~`, `++`, `--`)
 - Comparison operators (`<`, `>`, `<=`, `>=`)
 - Equality operators (`==`, `!=`)
 
 ### Static Members (forwarded from T)
+
 - All public static properties (e.g., `Vector3.UnitX` → `Position.UnitX`)
 - All public static readonly fields
 
 ### Instance Members (forwarded from T)
+
 - All public instance properties (e.g., `.X`, `.Y`, `.Z`)
 - All public instance methods (e.g., `.Length()`, `.Normalize()`)
 
 ### Interface Implementations
+
 - `IEquatable<AliasType>`
 - `IComparable<AliasType>` (if T implements `IComparable<T>`)
 - `IFormattable` (if T implements it)
@@ -91,7 +99,8 @@ Vector3 v = p;                       // ✓ Works
 Position p2 = p + velocity;          // ✓ Works (via Vector3 arithmetic)
 ```
 
-This is intentional for System.Numerics types where you want the arithmetic to "just work". The type safety comes from **distinct types at API boundaries**:
+This is intentional for System.Numerics types where you want the arithmetic to "just work". The type safety comes from *
+*distinct types at API boundaries**:
 
 ```cs
 // Your API enforces type safety
@@ -104,7 +113,8 @@ ApplyForce(velocity, position);  // ✗ Compile error!
 
 ### Alternative: Explicit Conversion
 
-If you want stricter type safety (no implicit mixing in arithmetic), modify the generator to use `explicit` operators instead. Then:
+If you want stricter type safety (no implicit mixing in arithmetic), modify the generator to use `explicit` operators
+instead. Then:
 
 ```cs
 Position p = (Position)new Vector3(1, 2, 3);  // Must be explicit
@@ -113,7 +123,8 @@ Position p2 = (Position)(p.Value + v.Value);   // Must unwrap for arithmetic
 
 ### Zero-Cost Abstraction
 
-The `readonly struct` with `[MethodImpl(MethodImplOptions.AggressiveInlining)]` means the JIT will optimize away the wrapper entirely in release builds. The generated code has the same performance as using `Vector3` directly.
+The `readonly struct` with `[MethodImpl(MethodImplOptions.AggressiveInlining)]` means the JIT will optimize away the
+wrapper entirely in release builds. The generated code has the same performance as using `Vector3` directly.
 
 ## Installation
 
@@ -164,7 +175,7 @@ public readonly partial struct Position
 
 ### Validation
 
-A simple `Validate` partial method pattern if you want runtime validation. 
+A simple `Validate` partial method pattern if you want runtime validation.
 
 (note: would need generator modification to call this from constructor, but one might consider a factory method)
 

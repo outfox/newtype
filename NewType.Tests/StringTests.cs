@@ -80,7 +80,7 @@ public class StringTests
         Name second = " World";
 
         Name result = first + second;
-        Assert.Equal("Hello World", (string)result);
+        Assert.Equal("Hello World", (string) result);
     }
 
     [Fact]
@@ -89,7 +89,7 @@ public class StringTests
         Name name = "Hello";
 
         Name result = name + " World";
-        Assert.Equal("Hello World", (string)result);
+        Assert.Equal("Hello World", (string) result);
     }
 
     [Fact]
@@ -98,7 +98,7 @@ public class StringTests
         Name name = "World";
 
         Name result = "Hello " + name;
-        Assert.Equal("Hello World", (string)result);
+        Assert.Equal("Hello World", (string) result);
     }
 
     [Fact]
@@ -107,10 +107,10 @@ public class StringTests
         Name name = "Alice";
 
         Name greeting = "Hello, " + name;
-        Assert.Equal("Hello, Alice", (string)greeting);
+        Assert.Equal("Hello, Alice", (string) greeting);
 
         Name suffixed = name + "!";
-        Assert.Equal("Alice!", (string)suffixed);
+        Assert.Equal("Alice!", (string) suffixed);
     }
 
     // --- Comparison Operators ---
@@ -213,7 +213,7 @@ public class StringTests
     {
         Name name = "Hello World";
         Name sub = name.Substring(6);
-        Assert.Equal("World", (string)sub);
+        Assert.Equal("World", (string) sub);
     }
 
     [Fact]
@@ -221,7 +221,7 @@ public class StringTests
     {
         Name name = "Hello World";
         Name sub = name.Substring(0, 5);
-        Assert.Equal("Hello", (string)sub);
+        Assert.Equal("Hello", (string) sub);
     }
 
     [Fact]
@@ -229,7 +229,7 @@ public class StringTests
     {
         Name name = "hello";
         Name upper = name.ToUpper();
-        Assert.Equal("HELLO", (string)upper);
+        Assert.Equal("HELLO", (string) upper);
     }
 
     [Fact]
@@ -237,7 +237,7 @@ public class StringTests
     {
         Name name = "HELLO";
         Name lower = name.ToLower();
-        Assert.Equal("hello", (string)lower);
+        Assert.Equal("hello", (string) lower);
     }
 
     [Fact]
@@ -245,7 +245,7 @@ public class StringTests
     {
         Name name = "  hello  ";
         Name trimmed = name.Trim();
-        Assert.Equal("hello", (string)trimmed);
+        Assert.Equal("hello", (string) trimmed);
     }
 
     [Fact]
@@ -253,7 +253,7 @@ public class StringTests
     {
         Name name = "Hello World";
         Name replaced = name.Replace("World", "There");
-        Assert.Equal("Hello There", (string)replaced);
+        Assert.Equal("Hello There", (string) replaced);
     }
 
     [Fact]
@@ -261,7 +261,7 @@ public class StringTests
     {
         Name name = "HelloWorld";
         Name inserted = name.Insert(5, " ");
-        Assert.Equal("Hello World", (string)inserted);
+        Assert.Equal("Hello World", (string) inserted);
     }
 
     // --- Return Type Wrapping ---
@@ -273,7 +273,7 @@ public class StringTests
         // This should return Name, not string
         Name result = name.Substring(0, 3);
         Assert.IsType<Name>(result);
-        Assert.Equal("Hel", (string)result);
+        Assert.Equal("Hel", (string) result);
     }
 
     [Fact]
@@ -290,7 +290,7 @@ public class StringTests
         Name name = "aaa";
         Name result = name.Replace("a", "b");
         Assert.IsType<Name>(result);
-        Assert.Equal("bbb", (string)result);
+        Assert.Equal("bbb", (string) result);
     }
 
     // --- ToString ---
@@ -351,18 +351,18 @@ public class StringTests
     [Fact]
     public void Name_RefLocal_ArrayAccess()
     {
-        var names = new Name[] { "Alice", "Bob", "Charlie" };
+        var names = new Name[] {"Alice", "Bob", "Charlie"};
 
         ref var name = ref names[1];
         name = "Dave";
 
-        Assert.Equal("Dave", (string)names[1]);
+        Assert.Equal("Dave", (string) names[1]);
     }
 
     [Fact]
     public void Name_Array_Iteration()
     {
-        var names = new Name[] { "Alice", "Bob", "Charlie" };
+        var names = new Name[] {"Alice", "Bob", "Charlie"};
 
         var result = new List<string>();
         foreach (var name in names)
@@ -370,6 +370,6 @@ public class StringTests
             result.Add(name.ToUpper());
         }
 
-        Assert.Equal(new[] { "ALICE", "BOB", "CHARLIE" }, result);
+        Assert.Equal(new[] {"ALICE", "BOB", "CHARLIE"}, result);
     }
 }

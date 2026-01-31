@@ -24,7 +24,7 @@ public class TypeSafetyTests
         Position p = new Vector3(1, 0, 0);
         Velocity v = new Vector3(0, 1, 0);
 
-        Assert.NotEqual((Vector3)p, (Vector3)v);
+        Assert.NotEqual((Vector3) p, (Vector3) v);
     }
 
     [Fact]
@@ -35,7 +35,7 @@ public class TypeSafetyTests
         Velocity v = new Vector3(10, 0, 0);
         const float dt = 0.5f;
 
-        var updated = p + (Vector3)v * dt;
+        var updated = p + (Vector3) v * dt;
         Assert.Equal(new Vector3(5, 0, 0), updated.Value);
     }
 
@@ -46,6 +46,6 @@ public class TypeSafetyTests
         Position p = new Vector3(2, 2, 2);
 
         // Same underlying value, but different types
-        Assert.Equal((Vector3)s, (Vector3)p);
+        Assert.Equal((Vector3) s, (Vector3) p);
     }
 }

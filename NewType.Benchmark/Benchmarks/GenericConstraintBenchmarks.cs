@@ -1,8 +1,6 @@
 using System.Runtime.CompilerServices;
 using BenchmarkDotNet.Attributes;
-using BenchmarkDotNet.Columns;
 using BenchmarkDotNet.Configs;
-using BenchmarkDotNet.Diagnosers;
 
 namespace newtype.benchmark;
 
@@ -39,7 +37,7 @@ public class GenericConstraintBenchmarks
     public bool Contains_Raw() => Contains(_rawArr, 512);
 
     [Benchmark, BenchmarkCategory("Contains")]
-    public bool Contains_Alias() => Contains(_aliasArr, (EntityId)512);
+    public bool Contains_Alias() => Contains(_aliasArr, (EntityId) 512);
 
     // --- Generic min (IComparable<T>) ---
     [Benchmark(Baseline = true), BenchmarkCategory("GenericMin")]
@@ -76,7 +74,7 @@ public class GenericConstraintBenchmarks
     public int CountEq_Raw() => CountEqual(_rawArr, 0);
 
     [Benchmark, BenchmarkCategory("CountEq")]
-    public int CountEq_Alias() => CountEqual(_aliasArr, (EntityId)0);
+    public int CountEq_Alias() => CountEqual(_aliasArr, (EntityId) 0);
 
     // --- Helpers: generic with struct constraints for devirtualization ---
 
@@ -84,7 +82,8 @@ public class GenericConstraintBenchmarks
     private static bool Contains<T>(T[] arr, T value) where T : struct, IEquatable<T>
     {
         for (var i = 0; i < arr.Length; i++)
-            if (arr[i].Equals(value)) return true;
+            if (arr[i].Equals(value))
+                return true;
         return false;
     }
 
@@ -93,7 +92,8 @@ public class GenericConstraintBenchmarks
     {
         var min = arr[0];
         for (var i = 1; i < arr.Length; i++)
-            if (arr[i].CompareTo(min) < 0) min = arr[i];
+            if (arr[i].CompareTo(min) < 0)
+                min = arr[i];
         return min;
     }
 
@@ -109,6 +109,7 @@ public class GenericConstraintBenchmarks
                 arr[j + 1] = arr[j];
                 j--;
             }
+
             arr[j + 1] = key;
         }
     }
@@ -118,7 +119,8 @@ public class GenericConstraintBenchmarks
     {
         var count = 0;
         for (var i = 0; i < arr.Length; i++)
-            if (arr[i].Equals(value)) count++;
+            if (arr[i].Equals(value))
+                count++;
         return count;
     }
 }

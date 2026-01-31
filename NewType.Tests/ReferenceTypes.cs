@@ -66,12 +66,12 @@ public class Money : IEquatable<Money>
 /// </summary>
 public record Rgb(byte R, byte G, byte B)
 {
-    public Rgb Invert() => new((byte)(255 - R), (byte)(255 - G), (byte)(255 - B));
+    public Rgb Invert() => new((byte) (255 - R), (byte) (255 - G), (byte) (255 - B));
 
     public Rgb Mix(Rgb other) => new(
-        (byte)((R + other.R) / 2),
-        (byte)((G + other.G) / 2),
-        (byte)((B + other.B) / 2));
+        (byte) ((R + other.R) / 2),
+        (byte) ((G + other.G) / 2),
+        (byte) ((B + other.B) / 2));
 
     public override string ToString() => $"#{R:X2}{G:X2}{B:X2}";
 }

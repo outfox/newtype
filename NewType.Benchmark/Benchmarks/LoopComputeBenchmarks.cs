@@ -1,7 +1,5 @@
 using BenchmarkDotNet.Attributes;
-using BenchmarkDotNet.Columns;
 using BenchmarkDotNet.Configs;
-using BenchmarkDotNet.Diagnosers;
 
 namespace newtype.benchmark;
 
@@ -89,7 +87,8 @@ public class LoopComputeBenchmarks
         var arr = _rawArr;
         var min = arr[0];
         for (var i = 1; i < arr.Length; i++)
-            if (arr[i] < min) min = arr[i];
+            if (arr[i] < min)
+                min = arr[i];
         return min;
     }
 
@@ -99,7 +98,8 @@ public class LoopComputeBenchmarks
         var arr = _aliasArr;
         var min = arr[0];
         for (var i = 1; i < arr.Length; i++)
-            if (arr[i] < min) min = arr[i];
+            if (arr[i] < min)
+                min = arr[i];
         return min;
     }
 

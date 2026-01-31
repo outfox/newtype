@@ -4,6 +4,7 @@ using System.Runtime.InteropServices;
 using Xunit;
 
 namespace newtype.tests;
+
 public class RefTests
 {
     [Fact]
@@ -170,7 +171,7 @@ public class RefTests
         {
             ref var pos = ref positions[i];
             ref readonly var vel = ref velocities[i];
-            pos += (Vector3)vel * dt;
+            pos += (Vector3) vel * dt;
         }
 
         Assert.Equal(new Vector3(0.5f, 0, 0), positions[0].Value);
@@ -239,7 +240,7 @@ public class RefTests
             new Vector3(4, 5, 6),
         };
 
-        var vectors = MemoryMarshal.Cast<Position, Vector3>((Span<Position>)positions);
+        var vectors = MemoryMarshal.Cast<Position, Vector3>((Span<Position>) positions);
 
         Assert.Equal(2, vectors.Length);
         Assert.Equal(new Vector3(1, 2, 3), vectors[0]);
@@ -255,7 +256,7 @@ public class RefTests
             new Vector3(0, 0, 0),
         };
 
-        var vectors = MemoryMarshal.Cast<Position, Vector3>((Span<Position>)positions);
+        var vectors = MemoryMarshal.Cast<Position, Vector3>((Span<Position>) positions);
         vectors[0] = new Vector3(7, 8, 9);
         vectors[1] = new Vector3(10, 11, 12);
 
@@ -311,17 +312,17 @@ public class RefTests
     [Fact]
     public void MixedTypes_RefIteration_TypeSafety()
     {
-        var positions = new Position[] { new Vector3(0, 0, 0) };
-        var velocities = new Velocity[] { new Vector3(5, 5, 5) };
-        var scales = new Scale[] { new Vector3(2, 2, 2) };
+        var positions = new Position[] {new Vector3(0, 0, 0)};
+        var velocities = new Velocity[] {new Vector3(5, 5, 5)};
+        var scales = new Scale[] {new Vector3(2, 2, 2)};
 
         ref var pos = ref positions[0];
         ref readonly var vel = ref velocities[0];
         ref readonly var scl = ref scales[0];
 
         // Apply velocity then scale — implicit conversions needed
-        pos = new Position((Vector3)pos + (Vector3)vel);
-        var scaled = new Position((Vector3)pos * (Vector3)scl);
+        pos = new Position((Vector3) pos + (Vector3) vel);
+        var scaled = new Position((Vector3) pos * (Vector3) scl);
 
         Assert.Equal(new Vector3(5, 5, 5), pos.Value);
         Assert.Equal(new Vector3(10, 10, 10), scaled.Value);

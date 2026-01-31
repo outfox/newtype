@@ -49,7 +49,7 @@ public class EqualityTests
     public void Equals_ObjectOverload_SameType()
     {
         Position a = new Vector3(1, 2, 3);
-        object b = (Position)new Vector3(1, 2, 3);
+        object b = (Position) new Vector3(1, 2, 3);
         Assert.True(a.Equals(b));
     }
 

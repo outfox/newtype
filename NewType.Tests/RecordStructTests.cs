@@ -40,9 +40,9 @@ public class RecordStructTests
         Score a = 50;
         Score b = 30;
 
-        Assert.Equal(80, (int)(a + b));
-        Assert.Equal(20, (int)(a - b));
-        Assert.Equal(1500, (int)(a * b));
+        Assert.Equal(80, (int) (a + b));
+        Assert.Equal(20, (int) (a - b));
+        Assert.Equal(1500, (int) (a * b));
     }
 
     [Fact]
@@ -50,9 +50,9 @@ public class RecordStructTests
     {
         Score s = 10;
 
-        Assert.Equal(20, (int)(s * 2));
-        Assert.Equal(20, (int)(2 * s));
-        Assert.Equal(5, (int)(s / 2));
+        Assert.Equal(20, (int) (s * 2));
+        Assert.Equal(20, (int) (2 * s));
+        Assert.Equal(5, (int) (s / 2));
     }
 
     [Fact]
@@ -72,16 +72,16 @@ public class RecordStructTests
     {
         Score s = 5;
 
-        Assert.Equal(-5, (int)(-s));
-        Assert.Equal(5, (int)(+s));
-        Assert.Equal(~5, (int)(~s));
+        Assert.Equal(-5, (int) (-s));
+        Assert.Equal(5, (int) (+s));
+        Assert.Equal(~5, (int) (~s));
     }
 
     [Fact]
     public void Score_Default()
     {
         Score s = default;
-        Assert.Equal(0, (int)s);
+        Assert.Equal(0, (int) s);
     }
 
     [Fact]
@@ -127,8 +127,8 @@ public class RecordStructTests
         Duration a = 10.5;
         Duration b = 4.5;
 
-        Assert.Equal(15.0, (double)(a + b));
-        Assert.Equal(6.0, (double)(a - b));
+        Assert.Equal(15.0, (double) (a + b));
+        Assert.Equal(6.0, (double) (a - b));
     }
 
     [Fact]
@@ -136,9 +136,9 @@ public class RecordStructTests
     {
         Duration d = 5.0;
 
-        Assert.Equal(10.0, (double)(d * 2.0));
-        Assert.Equal(10.0, (double)(2.0 * d));
-        Assert.Equal(2.5, (double)(d / 2.0));
+        Assert.Equal(10.0, (double) (d * 2.0));
+        Assert.Equal(10.0, (double) (2.0 * d));
+        Assert.Equal(2.5, (double) (d / 2.0));
     }
 
     [Fact]
@@ -157,14 +157,14 @@ public class RecordStructTests
     public void Duration_Negation()
     {
         Duration d = 3.0;
-        Assert.Equal(-3.0, (double)(-d));
+        Assert.Equal(-3.0, (double) (-d));
     }
 
     [Fact]
     public void Duration_Default()
     {
         Duration d = default;
-        Assert.Equal(0.0, (double)d);
+        Assert.Equal(0.0, (double) d);
     }
 
     [Fact]

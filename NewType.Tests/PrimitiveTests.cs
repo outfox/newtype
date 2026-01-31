@@ -41,10 +41,10 @@ public class PrimitiveTests
         EntityId a = 10;
         EntityId b = 3;
 
-        Assert.Equal(13, (int)(a + b));
-        Assert.Equal(7, (int)(a - b));
-        Assert.Equal(30, (int)(a * b));
-        Assert.Equal(3, (int)(a / b));
+        Assert.Equal(13, (int) (a + b));
+        Assert.Equal(7, (int) (a - b));
+        Assert.Equal(30, (int) (a * b));
+        Assert.Equal(3, (int) (a / b));
     }
 
     [Fact]
@@ -66,9 +66,9 @@ public class PrimitiveTests
     {
         EntityId id = 5;
 
-        Assert.Equal(-5, (int)(-id));
-        Assert.Equal(5, (int)(+id));
-        Assert.Equal(~5, (int)(~id));
+        Assert.Equal(-5, (int) (-id));
+        Assert.Equal(5, (int) (+id));
+        Assert.Equal(~5, (int) (~id));
     }
 
     [Fact]
@@ -77,9 +77,9 @@ public class PrimitiveTests
         EntityId a = 0b1100;
         EntityId b = 0b1010;
 
-        Assert.Equal(0b1000, (int)(a & b));
-        Assert.Equal(0b1110, (int)(a | b));
-        Assert.Equal(0b0110, (int)(a ^ b));
+        Assert.Equal(0b1000, (int) (a & b));
+        Assert.Equal(0b1110, (int) (a | b));
+        Assert.Equal(0b0110, (int) (a ^ b));
     }
 
     [Fact]
@@ -87,16 +87,16 @@ public class PrimitiveTests
     {
         EntityId a = 1;
 
-        Assert.Equal(8, (int)(a << 3));
+        Assert.Equal(8, (int) (a << 3));
         EntityId big = 16;
-        Assert.Equal(2, (int)(big >> 3));
+        Assert.Equal(2, (int) (big >> 3));
     }
 
     [Fact]
     public void EntityId_Default()
     {
         EntityId id = default;
-        Assert.Equal(0, (int)id);
+        Assert.Equal(0, (int) id);
     }
 
     [Fact]
@@ -123,10 +123,10 @@ public class PrimitiveTests
         Health damage = 25.0f;
 
         var remaining = a - damage;
-        Assert.Equal(55.0f, (float)remaining);
+        Assert.Equal(55.0f, (float) remaining);
 
-        var healed = remaining + (Health)10.0f;
-        Assert.Equal(65.0f, (float)healed);
+        var healed = remaining + (Health) 10.0f;
+        Assert.Equal(65.0f, (float) healed);
     }
 
     [Fact]
@@ -136,11 +136,11 @@ public class PrimitiveTests
 
         // alias op T
         var halved = h * 0.5f;
-        Assert.Equal(50.0f, (float)halved);
+        Assert.Equal(50.0f, (float) halved);
 
         // T op alias
         var doubled = 2.0f * h;
-        Assert.Equal(200.0f, (float)doubled);
+        Assert.Equal(200.0f, (float) doubled);
     }
 
     [Fact]
@@ -167,7 +167,7 @@ public class PrimitiveTests
     public void Health_Negation()
     {
         Health h = 10.0f;
-        Assert.Equal(-10.0f, (float)(-h));
+        Assert.Equal(-10.0f, (float) (-h));
     }
 
     [Fact]
@@ -194,10 +194,10 @@ public class PrimitiveTests
         Timestamp duration = 42.5;
 
         var end = start + duration;
-        Assert.Equal(142.5, (double)end);
+        Assert.Equal(142.5, (double) end);
 
         var diff = end - start;
-        Assert.Equal(42.5, (double)diff);
+        Assert.Equal(42.5, (double) diff);
     }
 
     [Fact]
@@ -224,7 +224,7 @@ public class PrimitiveTests
     public void Timestamp_Default()
     {
         Timestamp t = default;
-        Assert.Equal(0.0, (double)t);
+        Assert.Equal(0.0, (double) t);
     }
 
     // --- IsActive (bool) ---
@@ -294,18 +294,18 @@ public class PrimitiveTests
     [Fact]
     public void EntityId_RefLocal_ArrayAccess()
     {
-        var ids = new EntityId[] { 1, 2, 3 };
+        var ids = new EntityId[] {1, 2, 3};
 
         ref var id = ref ids[1];
         id = 42;
 
-        Assert.Equal(42, (int)ids[1]);
+        Assert.Equal(42, (int) ids[1]);
     }
 
     [Fact]
     public void Health_RefIteration_DamageAll()
     {
-        var healths = new Health[] { 100.0f, 80.0f, 60.0f };
+        var healths = new Health[] {100.0f, 80.0f, 60.0f};
         Health damage = 25.0f;
 
         for (var i = 0; i < healths.Length; i++)
@@ -314,15 +314,15 @@ public class PrimitiveTests
             h -= damage;
         }
 
-        Assert.Equal(75.0f, (float)healths[0]);
-        Assert.Equal(55.0f, (float)healths[1]);
-        Assert.Equal(35.0f, (float)healths[2]);
+        Assert.Equal(75.0f, (float) healths[0]);
+        Assert.Equal(55.0f, (float) healths[1]);
+        Assert.Equal(35.0f, (float) healths[2]);
     }
 
     [Fact]
     public void IsActive_RefToggle()
     {
-        var flags = new IsActive[] { true, false, true };
+        var flags = new IsActive[] {true, false, true};
 
         for (var i = 0; i < flags.Length; i++)
         {

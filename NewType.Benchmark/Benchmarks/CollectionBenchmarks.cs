@@ -1,5 +1,4 @@
 using BenchmarkDotNet.Attributes;
-using BenchmarkDotNet.Columns;
 using BenchmarkDotNet.Configs;
 
 namespace newtype.benchmark;
@@ -32,7 +31,7 @@ public class CollectionBenchmarks
         for (var i = 0; i < N; i++)
         {
             _rawDict[i] = i;
-            _aliasDict[(EntityId)i] = i;
+            _aliasDict[(EntityId) i] = i;
         }
 
         _rawKey = N / 2;

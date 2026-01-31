@@ -15,7 +15,7 @@ public class InterfaceTests
     [Fact]
     public void IEquatable_Equals_ReturnsTrue_ForEqual()
     {
-        IEquatable<Position> a = (Position)new Vector3(1, 2, 3);
+        IEquatable<Position> a = (Position) new Vector3(1, 2, 3);
         Position b = new Vector3(1, 2, 3);
         Assert.True(a.Equals(b));
     }
@@ -23,7 +23,7 @@ public class InterfaceTests
     [Fact]
     public void IEquatable_Equals_ReturnsFalse_ForDifferent()
     {
-        IEquatable<Position> a = (Position)new Vector3(1, 2, 3);
+        IEquatable<Position> a = (Position) new Vector3(1, 2, 3);
         Position b = new Vector3(4, 5, 6);
         Assert.False(a.Equals(b));
     }

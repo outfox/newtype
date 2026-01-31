@@ -1,8 +1,6 @@
 using System.Numerics;
 using BenchmarkDotNet.Attributes;
-using BenchmarkDotNet.Columns;
 using BenchmarkDotNet.Configs;
-using BenchmarkDotNet.Diagnosers;
 
 namespace newtype.benchmark;
 
@@ -26,12 +24,22 @@ public class InliningChainBenchmarks
     [GlobalSetup]
     public void Setup()
     {
-        _a = 17; _b = 42; _c = 9; _d = 3; _e = 100;
-        _aA = _a; _bA = _b; _cA = _c; _dA = _d; _eA = _e;
+        _a = 17;
+        _b = 42;
+        _c = 9;
+        _d = 3;
+        _e = 100;
+        _aA = _a;
+        _bA = _b;
+        _cA = _c;
+        _dA = _d;
+        _eA = _e;
         _v1 = new Vector3(1, 2, 3);
         _v2 = new Vector3(4, 5, 6);
         _v3 = new Vector3(7, 8, 9);
-        _p1 = _v1; _p2 = _v2; _p3 = _v3;
+        _p1 = _v1;
+        _p2 = _v2;
+        _p3 = _v3;
         _s = 0.5f;
     }
 

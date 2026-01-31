@@ -28,7 +28,7 @@ internal class AliasCodeGenerator
         _aliasedTypeName = alias.AliasedType.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat);
         _aliasedTypeFullName = alias.AliasedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
         var ns = alias.StructSymbol.ContainingNamespace;
-        _namespace = ns is { IsGlobalNamespace: false } ? ns.ToDisplayString() : "";
+        _namespace = ns is {IsGlobalNamespace: false} ? ns.ToDisplayString() : "";
         _isReadonly = alias.StructDeclaration.Modifiers.Any(Microsoft.CodeAnalysis.CSharp.SyntaxKind.ReadOnlyKeyword);
         _isRecordStruct = alias.StructDeclaration is RecordDeclarationSyntax;
     }
@@ -36,11 +36,11 @@ internal class AliasCodeGenerator
     public string Generate()
     {
         _sb.Clear();
-        
+
         AppendHeader();
         AppendNamespaceOpen();
         AppendStructOpen();
-        
+
         AppendField();
         AppendConstructors();
         AppendValueProperty();
@@ -54,7 +54,7 @@ internal class AliasCodeGenerator
         AppendToString();
         if (!_isRecordStruct)
             AppendGetHashCode();
-        
+
         AppendStructClose();
         AppendNamespaceClose();
 
@@ -122,7 +122,7 @@ internal class AliasCodeGenerator
         }
 
         var interfaceList = string.Join(", ", interfaces);
-        
+
         var structKeyword = _isRecordStruct ? "record struct" : "struct";
         _sb.AppendLine($"{indent}{accessMod}{readonlyMod}partial {structKeyword} {_structName} : {interfaceList}");
         _sb.AppendLine($"{indent}{{");
@@ -144,7 +144,7 @@ internal class AliasCodeGenerator
     private void AppendConstructors()
     {
         var indent = GetMemberIndent();
-        
+
         // Constructor from aliased type
         _sb.AppendLine($"{indent}/// <summary>Creates a new {_structName} from a {_aliasedTypeName}.</summary>");
         _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
@@ -167,13 +167,13 @@ internal class AliasCodeGenerator
     private void AppendImplicitOperators()
     {
         var indent = GetMemberIndent();
-        
+
         // Implicit from aliased type to alias
         _sb.AppendLine($"{indent}/// <summary>Implicitly converts from {_aliasedTypeName} to {_structName}.</summary>");
         _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
         _sb.AppendLine($"{indent}public static implicit operator {_structName}({_aliasedTypeFullName} value) => new {_structName}(value);");
         _sb.AppendLine();
-        
+
         // Implicit from alias to aliased type
         _sb.AppendLine($"{indent}/// <summary>Implicitly converts from {_structName} to {_aliasedTypeName}.</summary>");
         _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
@@ -346,6 +346,7 @@ internal class AliasCodeGenerator
                 _sb.AppendLine($"{indent}public static bool operator {op}({_structName} left, {_structName} right) => left._value {op} right._value;");
                 _sb.AppendLine();
             }
+
             return;
         }
 
@@ -435,7 +436,7 @@ internal class AliasCodeGenerator
     {
         var indent = GetMemberIndent();
         var aliasedType = _alias.AliasedType;
-        
+
         // Get all public static properties and fields
         var staticMembers = aliasedType.GetMembers()
             .Where(m => m.IsStatic && m.DeclaredAccessibility == Accessibility.Public)
@@ -456,7 +457,7 @@ internal class AliasCodeGenerator
                 var returnTypeStr = SymbolEqualityComparer.Default.Equals(prop.Type, _alias.AliasedType)
                     ? _structName
                     : prop.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-                
+
                 var needsConversion = SymbolEqualityComparer.Default.Equals(prop.Type, _alias.AliasedType);
                 var valueExpr = needsConversion
                     ? $"new {_structName}({_aliasedTypeFullName}.{prop.Name})"
@@ -475,7 +476,7 @@ internal class AliasCodeGenerator
                 var returnTypeStr = SymbolEqualityComparer.Default.Equals(field.Type, _alias.AliasedType)
                     ? _structName
                     : field.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-                
+
                 var needsConversion = SymbolEqualityComparer.Default.Equals(field.Type, _alias.AliasedType);
                 var valueExpr = needsConversion
                     ? $"new {_structName}({_aliasedTypeFullName}.{field.Name})"
@@ -553,7 +554,7 @@ internal class AliasCodeGenerator
             _sb.AppendLine($"{indent}/// <summary>Forwards {_aliasedTypeName}.{prop.Name}.</summary>");
             _sb.AppendLine($"{indent}public {returnTypeStr} {prop.Name}");
             _sb.AppendLine($"{indent}{{");
-            
+
             if (prop.GetMethod != null)
             {
                 var needsConversion = SymbolEqualityComparer.Default.Equals(prop.Type, _alias.AliasedType);
@@ -561,7 +562,7 @@ internal class AliasCodeGenerator
                 _sb.AppendLine($"{indent}    [MethodImpl(MethodImplOptions.AggressiveInlining)]");
                 _sb.AppendLine($"{indent}    get => {valueExpr};");
             }
-            
+
             _sb.AppendLine($"{indent}}}");
             _sb.AppendLine();
         }
@@ -570,7 +571,7 @@ internal class AliasCodeGenerator
         foreach (var method in instanceMethods)
         {
             var skipReturnWrapping = _alias.AliasedType.IsValueType &&
-                _alias.AliasedType.SpecialType != SpecialType.None;
+                                     _alias.AliasedType.SpecialType != SpecialType.None;
             var returnTypeStr = method.ReturnsVoid
                 ? "void"
                 : (SymbolEqualityComparer.Default.Equals(method.ReturnType, _alias.AliasedType) && !skipReturnWrapping)
@@ -611,7 +612,7 @@ internal class AliasCodeGenerator
             }));
 
             var needsReturnConversion = !method.ReturnsVoid && !skipReturnWrapping &&
-                SymbolEqualityComparer.Default.Equals(method.ReturnType, _alias.AliasedType);
+                                        SymbolEqualityComparer.Default.Equals(method.ReturnType, _alias.AliasedType);
             var returnExpr = method.ReturnsVoid
                 ? $"_value.{method.Name}({arguments})"
                 : needsReturnConversion
@@ -622,11 +623,11 @@ internal class AliasCodeGenerator
             _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
 
             _sb.AppendLine(
-                method.ReturnsVoid 
-                    ? $"{indent}public void {method.Name}({parameters}) => {returnExpr};" 
+                method.ReturnsVoid
+                    ? $"{indent}public void {method.Name}({parameters}) => {returnExpr};"
                     : $"{indent}public {returnTypeStr} {method.Name}({parameters}) => {returnExpr};"
-                );
-            
+            );
+
             _sb.AppendLine();
         }
 

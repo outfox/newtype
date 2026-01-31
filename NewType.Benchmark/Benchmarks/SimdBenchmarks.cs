@@ -1,8 +1,6 @@
 using System.Numerics;
 using BenchmarkDotNet.Attributes;
-using BenchmarkDotNet.Columns;
 using BenchmarkDotNet.Configs;
-using BenchmarkDotNet.Diagnosers;
 
 namespace newtype.benchmark;
 
@@ -73,7 +71,7 @@ public class SimdBenchmarks
         Position sum = Vector3.Zero;
         var arr = _aliasArr;
         for (var i = 0; i < arr.Length; i++)
-            sum += arr[i] * 0.5f + (Position)Vector3.One;
+            sum += arr[i] * 0.5f + (Position) Vector3.One;
         return sum;
     }
 

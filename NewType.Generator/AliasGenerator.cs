@@ -15,10 +15,7 @@ public class AliasGenerator : IIncrementalGenerator
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         // Register the attribute source
-        context.RegisterPostInitializationOutput(ctx =>
-        {
-            ctx.AddSource("newtypeAttribute.g.cs", SourceText.From(NewtypeAttributeSource.Source, Encoding.UTF8));
-        });
+        context.RegisterPostInitializationOutput(ctx => { ctx.AddSource("newtypeAttribute.g.cs", SourceText.From(NewtypeAttributeSource.Source, Encoding.UTF8)); });
 
         // Find all struct declarations with our attribute
         var aliasDeclarations = context.SyntaxProvider
@@ -56,7 +53,7 @@ public class AliasGenerator : IIncrementalGenerator
 
     private static AliasInfo? GetAliasInfo(GeneratorSyntaxContext context)
     {
-        var structDecl = (TypeDeclarationSyntax)context.Node;
+        var structDecl = (TypeDeclarationSyntax) context.Node;
         var semanticModel = context.SemanticModel;
 
         foreach (var attributeList in structDecl.AttributeLists)
@@ -116,7 +113,7 @@ public class AliasGenerator : IIncrementalGenerator
     {
         var generator = new AliasCodeGenerator(compilation, alias);
         var source = generator.Generate();
-        
+
         var fileName = $"{alias.StructSymbol.ToDisplayString().Replace(".", "_").Replace("<", "_").Replace(">", "_")}.g.cs";
         context.AddSource(fileName, SourceText.From(source, Encoding.UTF8));
     }
@@ -126,4 +123,3 @@ internal readonly record struct AliasInfo(
     TypeDeclarationSyntax StructDeclaration,
     INamedTypeSymbol StructSymbol,
     ITypeSymbol AliasedType);
-

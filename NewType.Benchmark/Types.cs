@@ -1,5 +1,4 @@
 using System.Numerics;
-using newtype;
 
 namespace newtype.benchmark;
 

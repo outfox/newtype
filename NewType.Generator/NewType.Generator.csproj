@@ -1,49 +1,49 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
-    <LangVersion>latest</LangVersion>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
-    <IsRoslynComponent>true</IsRoslynComponent>
-    
-    <!-- NuGet package properties -->
-    <PackageId>newtype</PackageId>
-    <Version>0.2.0</Version>
-    <Authors>Tiger</Authors>
-    <Copyright>Copyright (c) 2026 Moritz Voss</Copyright>
-    <Description>Source generator for creating distinct type aliases with full operator forwarding</Description>
-    <PackageTags>source-generator;roslyn;type-alias;newtype;value-object;haskell;type;</PackageTags>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageProjectUrl>https://github.com/outfox/newtype</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/outfox/newtype</RepositoryUrl>
-    <RepositoryType>git</RepositoryType>
-    <PackageReadmeFile>NUGET.md</PackageReadmeFile>
-    <PackageIcon>icon.png</PackageIcon>
+    <PropertyGroup>
+        <TargetFramework>netstandard2.0</TargetFramework>
+        <LangVersion>latest</LangVersion>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+        <IsRoslynComponent>true</IsRoslynComponent>
 
-    <!-- Important: Include the generator as an analyzer -->
-    <IncludeBuildOutput>false</IncludeBuildOutput>
-    <DevelopmentDependency>true</DevelopmentDependency>
-    <NoWarn>$(NoWarn);NU5128</NoWarn>
-    <RootNamespace>newtype.generator</RootNamespace>
-  </PropertyGroup>
+        <!-- NuGet package properties -->
+        <PackageId>newtype</PackageId>
+        <Version>0.2.0</Version>
+        <Authors>Tiger</Authors>
+        <Copyright>Copyright (c) 2026 Moritz Voss</Copyright>
+        <Description>Source generator for creating distinct type aliases with full operator forwarding</Description>
+        <PackageTags>source-generator;roslyn;type-alias;newtype;value-object;haskell;type;</PackageTags>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <PackageProjectUrl>https://github.com/outfox/newtype</PackageProjectUrl>
+        <RepositoryUrl>https://github.com/outfox/newtype</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+        <PackageReadmeFile>NUGET.md</PackageReadmeFile>
+        <PackageIcon>icon.png</PackageIcon>
 
-  <ItemGroup>
-    <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.3.4" PrivateAssets="all" />
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.8.0" PrivateAssets="all" />
-  </ItemGroup>
+        <!-- Important: Include the generator as an analyzer -->
+        <IncludeBuildOutput>false</IncludeBuildOutput>
+        <DevelopmentDependency>true</DevelopmentDependency>
+        <NoWarn>$(NoWarn);NU5128</NoWarn>
+        <RootNamespace>newtype.generator</RootNamespace>
+    </PropertyGroup>
 
-  <!-- Pack the generator into the analyzer directory -->
-  <ItemGroup>
-    <None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
-  </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.3.4" PrivateAssets="all"/>
+        <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.8.0" PrivateAssets="all"/>
+    </ItemGroup>
 
-  <!-- Include README and LICENSE in the package -->
-  <ItemGroup>
-    <None Include="../LICENSE" Pack="true" PackagePath="/" />
-    <None Include="icon.png" Pack="true" PackagePath="/" />
-    <None Include="NUGET.md" Pack="true" PackagePath="/" />
-  </ItemGroup>
+    <!-- Pack the generator into the analyzer directory -->
+    <ItemGroup>
+        <None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false"/>
+    </ItemGroup>
+
+    <!-- Include README and LICENSE in the package -->
+    <ItemGroup>
+        <None Include="../LICENSE" Pack="true" PackagePath="/"/>
+        <None Include="icon.png" Pack="true" PackagePath="/"/>
+        <None Include="NUGET.md" Pack="true" PackagePath="/"/>
+    </ItemGroup>
 
 </Project>
