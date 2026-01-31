@@ -1,9 +1,8 @@
-# `newtype` (Distinct Type Aliases for C#)
+# `newtype` *(Distinct Type Aliases for C#)*
 
 ![logo, a stylized N with a red and Blue half](https://raw.githubusercontent.com/outfox/newtype/main/logo.svg)
 
-A source generator that creates distinct type aliases with full operator forwarding. Inspired by Haskell's `newtype` and
-F#'s type abbreviations. `newtype` works for a healthy number of types - many primitives, structs, records, classes work out of the box.
+This package is a source generator that creates distinct type aliases with full operator and constructor forwarding. Inspired by Haskell's `newtype` and F#'s type abbreviations. `newtype` works for a healthy number of types - many primitives, structs, records, classes work out of the box.
 
 ## Installation
 

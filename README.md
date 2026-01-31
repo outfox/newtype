@@ -1,4 +1,4 @@
-# `newtype` - Type Aliases for C#
+# `newtype` *(Distinct Type Aliases for C#)*
 
 <p align="center">
   <img src="logo.svg" alt="logo, a stylized N with a red and Blue half" width="30%">
@@ -8,7 +8,7 @@
 [![NuGet](https://img.shields.io/nuget/v/newtype?color=blue)](https://www.nuget.org/packages/newtype/)
 [![Build Status](https://github.com/outfox/newtype/actions/workflows/dotnet.yml/badge.svg)](https://github.com/outfox/newtype/actions/workflows/dotnet.yml)
 
-A source generator that creates distinct type aliases with full operator forwarding. Inspired by Haskell's `newtype` and F#'s type abbreviations. `newtype` works for a healthy number of types - many primitives, structs, records, classes work out of the box.
+This package is a source generator that creates distinct type aliases with full operator and constructor forwarding. Inspired by Haskell's `newtype` and F#'s type abbreviations. `newtype` works for a healthy number of types - many primitives, structs, records, classes work out of the box.
 
 ## Installation
 
@@ -22,11 +22,30 @@ dotnet add package newtype
 ```csharp
 using newtype;
 
+[newtype<string>]
+public readonly partial struct TableId;
+
 [newtype<int>]
-public readonly partial struct Pizzas;
+public readonly partial struct PizzasEaten;
 
 [newtype<double>]
 public readonly partial struct Fullness;
+
+class Guest
+{
+    TableId table = "Table 1";
+    PizzasEaten pizzasEaten;
+    Fullness fullness;
+    
+    public void fillEmUp(Fullness threshold)
+    {
+        while (fullness < threshold)
+        {
+            pizzasEaten++;
+            fullness += 0.1;
+        }
+    }
+}
 ```
 
 #### Typical: quantities backed by the same data type.
