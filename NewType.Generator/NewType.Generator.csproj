@@ -18,6 +18,7 @@
     <!-- Important: Include the generator as an analyzer -->
     <IncludeBuildOutput>false</IncludeBuildOutput>
     <DevelopmentDependency>true</DevelopmentDependency>
+    <RootNamespace>TypeAlias.Generator</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
