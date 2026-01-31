@@ -27,3 +27,6 @@ public readonly partial struct Timestamp;
 
 [newtype<bool>]
 public readonly partial struct IsActive;
+
+[newtype<string>]
+public readonly partial struct Name;

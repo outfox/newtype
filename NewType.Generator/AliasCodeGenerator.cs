@@ -320,27 +320,33 @@ internal class AliasCodeGenerator
     private void AppendComparisonOperators()
     {
         var indent = GetMemberIndent();
-        
+
         // Check if the type already has comparison operators
         var hasLessThan = GetBinaryOperators(_alias.AliasedType).Any(o => o.Name == "op_LessThan");
-        
+
         if (!hasLessThan && ImplementsInterface(_alias.AliasedType, "System.IComparable`1"))
         {
+            var isRefType = !_alias.AliasedType.IsValueType;
+
+            string CompareExpr(string op) => isRefType
+                ? $"(left._value is null ? (right._value is null ? 0 : -1) : left._value.CompareTo(right._value)) {op} 0"
+                : $"left._value.CompareTo(right._value) {op} 0";
+
             // Generate comparison operators using IComparable
             _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
-            _sb.AppendLine($"{indent}public static bool operator <({_structName} left, {_structName} right) => left._value.CompareTo(right._value) < 0;");
+            _sb.AppendLine($"{indent}public static bool operator <({_structName} left, {_structName} right) => {CompareExpr("<")};");
             _sb.AppendLine();
-            
+
             _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
-            _sb.AppendLine($"{indent}public static bool operator >({_structName} left, {_structName} right) => left._value.CompareTo(right._value) > 0;");
+            _sb.AppendLine($"{indent}public static bool operator >({_structName} left, {_structName} right) => {CompareExpr(">")};");
             _sb.AppendLine();
-            
+
             _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
-            _sb.AppendLine($"{indent}public static bool operator <=({_structName} left, {_structName} right) => left._value.CompareTo(right._value) <= 0;");
+            _sb.AppendLine($"{indent}public static bool operator <=({_structName} left, {_structName} right) => {CompareExpr("<=")};");
             _sb.AppendLine();
-            
+
             _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
-            _sb.AppendLine($"{indent}public static bool operator >=({_structName} left, {_structName} right) => left._value.CompareTo(right._value) >= 0;");
+            _sb.AppendLine($"{indent}public static bool operator >=({_structName} left, {_structName} right) => {CompareExpr(">=")};");
             _sb.AppendLine();
         }
     }
@@ -348,34 +354,41 @@ internal class AliasCodeGenerator
     private void AppendEqualityMembers()
     {
         var indent = GetMemberIndent();
-        
+        var isRefType = !_alias.AliasedType.IsValueType;
+
         // IEquatable<T>.Equals
+        var equalsExpr = isRefType
+            ? "object.Equals(_value, other._value)"
+            : "_value.Equals(other._value)";
         _sb.AppendLine($"{indent}/// <inheritdoc/>");
         _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
-        _sb.AppendLine($"{indent}public bool Equals({_structName} other) => _value.Equals(other._value);");
+        _sb.AppendLine($"{indent}public bool Equals({_structName} other) => {equalsExpr};");
         _sb.AppendLine();
-        
+
         // Object.Equals override
         _sb.AppendLine($"{indent}/// <inheritdoc/>");
         _sb.AppendLine($"{indent}public override bool Equals(object? obj) => obj is {_structName} other && Equals(other);");
         _sb.AppendLine();
-        
+
         // == operator
         _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
         _sb.AppendLine($"{indent}public static bool operator ==({_structName} left, {_structName} right) => left.Equals(right);");
         _sb.AppendLine();
-        
+
         // != operator
         _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
         _sb.AppendLine($"{indent}public static bool operator !=({_structName} left, {_structName} right) => !left.Equals(right);");
         _sb.AppendLine();
-        
+
         // IComparable<T>.CompareTo if applicable
         if (ImplementsInterface(_alias.AliasedType, "System.IComparable`1"))
         {
+            var compareExpr = isRefType
+                ? "_value is null ? (other._value is null ? 0 : -1) : _value.CompareTo(other._value)"
+                : "_value.CompareTo(other._value)";
             _sb.AppendLine($"{indent}/// <inheritdoc/>");
             _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
-            _sb.AppendLine($"{indent}public int CompareTo({_structName} other) => _value.CompareTo(other._value);");
+            _sb.AppendLine($"{indent}public int CompareTo({_structName} other) => {compareExpr};");
             _sb.AppendLine();
         }
     }
@@ -517,10 +530,11 @@ internal class AliasCodeGenerator
         // Generate method forwarders
         foreach (var method in instanceMethods)
         {
-            var isPrimitiveAlias = _alias.AliasedType.SpecialType != SpecialType.None;
+            var skipReturnWrapping = _alias.AliasedType.IsValueType &&
+                _alias.AliasedType.SpecialType != SpecialType.None;
             var returnTypeStr = method.ReturnsVoid
                 ? "void"
-                : (SymbolEqualityComparer.Default.Equals(method.ReturnType, _alias.AliasedType) && !isPrimitiveAlias)
+                : (SymbolEqualityComparer.Default.Equals(method.ReturnType, _alias.AliasedType) && !skipReturnWrapping)
                     ? _structName
                     : method.ReturnType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
 
@@ -557,7 +571,7 @@ internal class AliasCodeGenerator
                 return $"{refKind}{arg}";
             }));
 
-            var needsReturnConversion = !method.ReturnsVoid && !isPrimitiveAlias &&
+            var needsReturnConversion = !method.ReturnsVoid && !skipReturnWrapping &&
                 SymbolEqualityComparer.Default.Equals(method.ReturnType, _alias.AliasedType);
             var returnExpr = method.ReturnsVoid
                 ? $"_value.{method.Name}({arguments})"
@@ -586,9 +600,11 @@ internal class AliasCodeGenerator
     private void AppendToString()
     {
         var indent = GetMemberIndent();
-        
+        var isRefType = !_alias.AliasedType.IsValueType;
+
+        var toStringExpr = isRefType ? "_value?.ToString() ?? \"\"" : "_value.ToString()";
         _sb.AppendLine($"{indent}/// <inheritdoc/>");
-        _sb.AppendLine($"{indent}public override string ToString() => _value.ToString();");
+        _sb.AppendLine($"{indent}public override string ToString() => {toStringExpr};");
         _sb.AppendLine();
 
         // Add IFormattable.ToString if the aliased type implements it
@@ -603,9 +619,12 @@ internal class AliasCodeGenerator
     private void AppendGetHashCode()
     {
         var indent = GetMemberIndent();
+        var isRefType = !_alias.AliasedType.IsValueType;
+
+        var hashExpr = isRefType ? "_value?.GetHashCode() ?? 0" : "_value.GetHashCode()";
         _sb.AppendLine($"{indent}/// <inheritdoc/>");
         _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
-        _sb.AppendLine($"{indent}public override int GetHashCode() => _value.GetHashCode();");
+        _sb.AppendLine($"{indent}public override int GetHashCode() => {hashExpr};");
         _sb.AppendLine();
     }
 
@@ -684,6 +703,8 @@ internal class AliasCodeGenerator
                 return new[] { "op_Addition", "op_Subtraction", "op_Multiply", "op_Division", "op_Modulus" };
             case SpecialType.System_Boolean:
                 return new[] { "op_BitwiseAnd", "op_BitwiseOr", "op_ExclusiveOr" };
+            case SpecialType.System_String:
+                return new[] { "op_Addition" };
             default:
                 return Array.Empty<string>();
         }

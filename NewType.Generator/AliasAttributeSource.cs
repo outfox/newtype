@@ -26,7 +26,6 @@ internal static class newtypeAttributeSource
             [global::System.AttributeUsage(global::System.AttributeTargets.Struct, AllowMultiple = false, Inherited = false)]
             [global::System.Diagnostics.Conditional("newtype_GENERATOR")]
             internal sealed class newtypeAttribute<T> : global::System.Attribute
-                where T : struct
             {
                 /// <summary>
                 /// Creates a new alias attribute for the specified type.
