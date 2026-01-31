@@ -9,6 +9,7 @@ namespace newtype.benchmark;
 [GroupBenchmarksBy(BenchmarkLogicalGroupRule.ByCategory)]
 [CategoriesColumn]
 [DisassemblyDiagnoser(maxDepth: 2)]
+[ShortRunJob]
 public class PrimitiveArithmeticBenchmarks
 {
     private int _rawA, _rawB;

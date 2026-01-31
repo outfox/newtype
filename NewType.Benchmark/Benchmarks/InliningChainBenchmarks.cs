@@ -14,6 +14,7 @@ namespace newtype.benchmark;
 [GroupBenchmarksBy(BenchmarkLogicalGroupRule.ByCategory)]
 [CategoriesColumn]
 [DisassemblyDiagnoser(maxDepth: 3)]
+[ShortRunJob]
 public class InliningChainBenchmarks
 {
     private int _a, _b, _c, _d, _e;

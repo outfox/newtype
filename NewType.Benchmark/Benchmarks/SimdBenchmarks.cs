@@ -14,6 +14,7 @@ namespace newtype.benchmark;
 [GroupBenchmarksBy(BenchmarkLogicalGroupRule.ByCategory)]
 [CategoriesColumn]
 [DisassemblyDiagnoser(maxDepth: 3)]
+[ShortRunJob]
 public class SimdBenchmarks
 {
     private const int N = 1024;

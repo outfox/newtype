@@ -8,6 +8,7 @@ namespace newtype.benchmark;
 [MemoryDiagnoser(displayGenColumns: false)]
 [GroupBenchmarksBy(BenchmarkLogicalGroupRule.ByCategory)]
 [CategoriesColumn]
+[ShortRunJob]
 public class Vector3PropertyAccessBenchmarks
 {
     private Vector3 _raw;

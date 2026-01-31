@@ -7,6 +7,7 @@ namespace newtype.benchmark;
 [MemoryDiagnoser(displayGenColumns: false)]
 [GroupBenchmarksBy(BenchmarkLogicalGroupRule.ByCategory)]
 [CategoriesColumn]
+[ShortRunJob]
 public class PrimitiveHashingBenchmarks
 {
     private int _rawA;

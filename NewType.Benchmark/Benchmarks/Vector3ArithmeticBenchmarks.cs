@@ -10,6 +10,7 @@ namespace newtype.benchmark;
 [GroupBenchmarksBy(BenchmarkLogicalGroupRule.ByCategory)]
 [CategoriesColumn]
 [DisassemblyDiagnoser(maxDepth: 2)]
+[ShortRunJob]
 public class Vector3ArithmeticBenchmarks
 {
     private Vector3 _rawA, _rawB;
