@@ -40,3 +40,10 @@ public readonly partial struct Price;
 
 [newtype<Rgb>]
 public readonly partial struct Tint;
+
+// record struct variants
+[newtype<int>]
+public partial record struct Score;
+
+[newtype<double>]
+public readonly partial record struct Duration;

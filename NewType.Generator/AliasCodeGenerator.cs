@@ -1,4 +1,5 @@
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System.Text;
 
 namespace newtype.generator;
@@ -17,6 +18,7 @@ internal class AliasCodeGenerator
     private readonly string _aliasedTypeFullName;
     private readonly string _namespace;
     private readonly bool _isReadonly;
+    private readonly bool _isRecordStruct;
 
     public AliasCodeGenerator(Compilation compilation, AliasInfo alias)
     {
@@ -28,6 +30,7 @@ internal class AliasCodeGenerator
         var ns = alias.StructSymbol.ContainingNamespace;
         _namespace = ns is { IsGlobalNamespace: false } ? ns.ToDisplayString() : "";
         _isReadonly = alias.StructDeclaration.Modifiers.Any(Microsoft.CodeAnalysis.CSharp.SyntaxKind.ReadOnlyKeyword);
+        _isRecordStruct = alias.StructDeclaration is RecordDeclarationSyntax;
     }
 
     public string Generate()
@@ -49,7 +52,8 @@ internal class AliasCodeGenerator
         AppendStaticMembers();
         AppendInstanceMembers();
         AppendToString();
-        AppendGetHashCode();
+        if (!_isRecordStruct)
+            AppendGetHashCode();
         
         AppendStructClose();
         AppendNamespaceClose();
@@ -119,7 +123,8 @@ internal class AliasCodeGenerator
 
         var interfaceList = string.Join(", ", interfaces);
         
-        _sb.AppendLine($"{indent}{accessMod}{readonlyMod}partial struct {_structName} : {interfaceList}");
+        var structKeyword = _isRecordStruct ? "record struct" : "struct";
+        _sb.AppendLine($"{indent}{accessMod}{readonlyMod}partial {structKeyword} {_structName} : {interfaceList}");
         _sb.AppendLine($"{indent}{{");
     }
 
@@ -357,29 +362,33 @@ internal class AliasCodeGenerator
         var indent = GetMemberIndent();
         var isRefType = !_alias.AliasedType.IsValueType;
 
-        // IEquatable<T>.Equals
-        var equalsExpr = isRefType
-            ? "object.Equals(_value, other._value)"
-            : "_value.Equals(other._value)";
-        _sb.AppendLine($"{indent}/// <inheritdoc/>");
-        _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
-        _sb.AppendLine($"{indent}public bool Equals({_structName} other) => {equalsExpr};");
-        _sb.AppendLine();
+        // record structs synthesize Equals, ==, != — skip to avoid CS0111
+        if (!_isRecordStruct)
+        {
+            // IEquatable<T>.Equals
+            var equalsExpr = isRefType
+                ? "object.Equals(_value, other._value)"
+                : "_value.Equals(other._value)";
+            _sb.AppendLine($"{indent}/// <inheritdoc/>");
+            _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
+            _sb.AppendLine($"{indent}public bool Equals({_structName} other) => {equalsExpr};");
+            _sb.AppendLine();
 
-        // Object.Equals override
-        _sb.AppendLine($"{indent}/// <inheritdoc/>");
-        _sb.AppendLine($"{indent}public override bool Equals(object? obj) => obj is {_structName} other && Equals(other);");
-        _sb.AppendLine();
+            // Object.Equals override
+            _sb.AppendLine($"{indent}/// <inheritdoc/>");
+            _sb.AppendLine($"{indent}public override bool Equals(object? obj) => obj is {_structName} other && Equals(other);");
+            _sb.AppendLine();
 
-        // == operator
-        _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
-        _sb.AppendLine($"{indent}public static bool operator ==({_structName} left, {_structName} right) => left.Equals(right);");
-        _sb.AppendLine();
+            // == operator
+            _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
+            _sb.AppendLine($"{indent}public static bool operator ==({_structName} left, {_structName} right) => left.Equals(right);");
+            _sb.AppendLine();
 
-        // != operator
-        _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
-        _sb.AppendLine($"{indent}public static bool operator !=({_structName} left, {_structName} right) => !left.Equals(right);");
-        _sb.AppendLine();
+            // != operator
+            _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
+            _sb.AppendLine($"{indent}public static bool operator !=({_structName} left, {_structName} right) => !left.Equals(right);");
+            _sb.AppendLine();
+        }
 
         // IComparable<T>.CompareTo if applicable
         if (ImplementsInterface(_alias.AliasedType, "System.IComparable`1"))

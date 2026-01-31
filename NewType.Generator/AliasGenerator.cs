@@ -44,13 +44,19 @@ public class AliasGenerator : IIncrementalGenerator
 
     private static bool IsCandidateStruct(SyntaxNode node)
     {
-        return node is StructDeclarationSyntax {AttributeLists.Count: > 0} structDecl &&
-               structDecl.Modifiers.Any(SyntaxKind.PartialKeyword);
+        if (node is StructDeclarationSyntax {AttributeLists.Count: > 0} structDecl)
+            return structDecl.Modifiers.Any(SyntaxKind.PartialKeyword);
+
+        if (node is RecordDeclarationSyntax {AttributeLists.Count: > 0} recordDecl
+            && recordDecl.ClassOrStructKeyword.IsKind(SyntaxKind.StructKeyword))
+            return recordDecl.Modifiers.Any(SyntaxKind.PartialKeyword);
+
+        return false;
     }
 
     private static AliasInfo? GetAliasInfo(GeneratorSyntaxContext context)
     {
-        var structDecl = (StructDeclarationSyntax)context.Node;
+        var structDecl = (TypeDeclarationSyntax)context.Node;
         var semanticModel = context.SemanticModel;
 
         foreach (var attributeList in structDecl.AttributeLists)
@@ -117,7 +123,7 @@ public class AliasGenerator : IIncrementalGenerator
 }
 
 internal readonly record struct AliasInfo(
-    StructDeclarationSyntax StructDeclaration,
+    TypeDeclarationSyntax StructDeclaration,
     INamedTypeSymbol StructSymbol,
     ITypeSymbol AliasedType);
 
