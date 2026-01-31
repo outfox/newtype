@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="logo.svg" alt="newtype logo, a stylized N with a red and Blue half" width="50%">
+  <img src="logo.svg" alt="newtype logo, a stylized N with a red and Blue half" width="30%">
 </p>
 
 # `newtype` - Type Aliases for C#
