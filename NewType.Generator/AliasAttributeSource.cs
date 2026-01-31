@@ -17,13 +17,13 @@ internal static class NewtypeAttributeSource
                                  namespace newtype
                                  {
                                      /// <summary>
-                                     /// Marks a partial struct as a type alias for the specified type.
+                                     /// Marks a partial type as a type alias for the specified type.
                                      /// The source generator will generate implicit conversions, operator forwarding,
                                      /// and interface implementations to make this type behave like the aliased type
                                      /// while remaining a distinct type for compile-time type safety.
                                      /// </summary>
                                      /// <typeparam name="T">The type to alias.</typeparam>
-                                     [global::System.AttributeUsage(global::System.AttributeTargets.Struct, AllowMultiple = false, Inherited = false)]
+                                     [global::System.AttributeUsage(global::System.AttributeTargets.Struct | global::System.AttributeTargets.Class, AllowMultiple = false, Inherited = false)]
                                      [global::System.Diagnostics.Conditional("newtype_GENERATOR")]
                                      internal sealed class newtypeAttribute<T> : global::System.Attribute
                                      {
@@ -36,7 +36,7 @@ internal static class NewtypeAttributeSource
                                      /// <summary>
                                      /// Non-generic version for older C# versions or when generic attributes aren't supported.
                                      /// </summary>
-                                     [global::System.AttributeUsage(global::System.AttributeTargets.Struct, AllowMultiple = false, Inherited = false)]
+                                     [global::System.AttributeUsage(global::System.AttributeTargets.Struct | global::System.AttributeTargets.Class, AllowMultiple = false, Inherited = false)]
                                      [global::System.Diagnostics.Conditional("newtype_GENERATOR")]
                                      internal sealed class newtypeAttribute : global::System.Attribute
                                      {

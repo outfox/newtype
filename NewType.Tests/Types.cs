@@ -47,3 +47,23 @@ public partial record struct Score;
 
 [newtype<double>]
 public readonly partial record struct Duration;
+
+// class wrappers
+[newtype<int>]
+public partial class ClassEntityId;
+
+[newtype<string>]
+public partial class ClassName;
+
+[newtype<EmailAddress>]
+public partial class ClassContactEmail;
+
+// record class wrappers
+[newtype<int>]
+public partial record RecordEntityId;
+
+[newtype<double>]
+public partial record RecordTimestamp;
+
+[newtype<Rgb>]
+public partial record RecordTint;

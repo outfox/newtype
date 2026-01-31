@@ -1,4 +1,5 @@
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System.Text;
 
@@ -13,24 +14,30 @@ internal class AliasCodeGenerator
     private readonly Compilation _compilation;
     private readonly AliasInfo _alias;
     private readonly StringBuilder _sb = new();
-    private readonly string _structName;
+    private readonly string _typeName;
     private readonly string _aliasedTypeName;
     private readonly string _aliasedTypeFullName;
     private readonly string _namespace;
     private readonly bool _isReadonly;
+    private readonly bool _isClass;
+    private readonly bool _isRecord;
     private readonly bool _isRecordStruct;
 
     public AliasCodeGenerator(Compilation compilation, AliasInfo alias)
     {
         _compilation = compilation;
         _alias = alias;
-        _structName = alias.StructSymbol.Name;
+        _typeName = alias.TypeSymbol.Name;
         _aliasedTypeName = alias.AliasedType.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat);
         _aliasedTypeFullName = alias.AliasedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-        var ns = alias.StructSymbol.ContainingNamespace;
+        var ns = alias.TypeSymbol.ContainingNamespace;
         _namespace = ns is {IsGlobalNamespace: false} ? ns.ToDisplayString() : "";
-        _isReadonly = alias.StructDeclaration.Modifiers.Any(Microsoft.CodeAnalysis.CSharp.SyntaxKind.ReadOnlyKeyword);
-        _isRecordStruct = alias.StructDeclaration is RecordDeclarationSyntax;
+        _isReadonly = alias.TypeDeclaration.Modifiers.Any(SyntaxKind.ReadOnlyKeyword);
+        _isClass = alias.TypeDeclaration is ClassDeclarationSyntax
+            || (alias.TypeDeclaration is RecordDeclarationSyntax rds
+                && !rds.ClassOrStructKeyword.IsKind(SyntaxKind.StructKeyword));
+        _isRecord = alias.TypeDeclaration is RecordDeclarationSyntax;
+        _isRecordStruct = _isRecord && !_isClass;
     }
 
     public string Generate()
@@ -39,7 +46,7 @@ internal class AliasCodeGenerator
 
         AppendHeader();
         AppendNamespaceOpen();
-        AppendStructOpen();
+        AppendTypeOpen();
 
         AppendField();
         AppendConstructors();
@@ -52,10 +59,10 @@ internal class AliasCodeGenerator
         AppendStaticMembers();
         AppendInstanceMembers();
         AppendToString();
-        if (!_isRecordStruct)
+        if (!_isRecord)
             AppendGetHashCode();
 
-        AppendStructClose();
+        AppendTypeClose();
         AppendNamespaceClose();
 
         return _sb.ToString();
@@ -88,11 +95,11 @@ internal class AliasCodeGenerator
         }
     }
 
-    private void AppendStructOpen()
+    private void AppendTypeOpen()
     {
         var indent = string.IsNullOrEmpty(_namespace) ? "" : "    ";
-        var readonlyMod = _isReadonly ? "readonly " : "";
-        var accessMod = _alias.StructSymbol.DeclaredAccessibility switch
+        var readonlyMod = (_isReadonly && !_isClass) ? "readonly " : "";
+        var accessMod = _alias.TypeSymbol.DeclaredAccessibility switch
         {
             Accessibility.Public => "public ",
             Accessibility.Internal => "internal ",
@@ -106,13 +113,13 @@ internal class AliasCodeGenerator
         // Build interface list
         var interfaces = new List<string>
         {
-            $"global::System.IEquatable<{_structName}>"
+            $"global::System.IEquatable<{_typeName}>"
         };
 
         // Check if aliased type implements IComparable
         if (ImplementsInterface(_alias.AliasedType, "System.IComparable`1"))
         {
-            interfaces.Add($"global::System.IComparable<{_structName}>");
+            interfaces.Add($"global::System.IComparable<{_typeName}>");
         }
 
         // Check for IFormattable
@@ -123,12 +130,18 @@ internal class AliasCodeGenerator
 
         var interfaceList = string.Join(", ", interfaces);
 
-        var structKeyword = _isRecordStruct ? "record struct" : "struct";
-        _sb.AppendLine($"{indent}{accessMod}{readonlyMod}partial {structKeyword} {_structName} : {interfaceList}");
+        var typeKeyword = (_isClass, _isRecord) switch
+        {
+            (false, false) => "struct",
+            (false, true) => "record struct",
+            (true, false) => "class",
+            (true, true) => "record class",
+        };
+        _sb.AppendLine($"{indent}{accessMod}{readonlyMod}partial {typeKeyword} {_typeName} : {interfaceList}");
         _sb.AppendLine($"{indent}{{");
     }
 
-    private void AppendStructClose()
+    private void AppendTypeClose()
     {
         var indent = string.IsNullOrEmpty(_namespace) ? "" : "    ";
         _sb.AppendLine($"{indent}}}");
@@ -146,9 +159,9 @@ internal class AliasCodeGenerator
         var indent = GetMemberIndent();
 
         // Constructor from aliased type
-        _sb.AppendLine($"{indent}/// <summary>Creates a new {_structName} from a {_aliasedTypeName}.</summary>");
+        _sb.AppendLine($"{indent}/// <summary>Creates a new {_typeName} from a {_aliasedTypeName}.</summary>");
         _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
-        _sb.AppendLine($"{indent}public {_structName}({_aliasedTypeFullName} value) => _value = value;");
+        _sb.AppendLine($"{indent}public {_typeName}({_aliasedTypeFullName} value) => _value = value;");
         _sb.AppendLine();
 
         // Forward constructors from the aliased type
@@ -176,15 +189,15 @@ internal class AliasCodeGenerator
         var indent = GetMemberIndent();
 
         // Implicit from aliased type to alias
-        _sb.AppendLine($"{indent}/// <summary>Implicitly converts from {_aliasedTypeName} to {_structName}.</summary>");
+        _sb.AppendLine($"{indent}/// <summary>Implicitly converts from {_aliasedTypeName} to {_typeName}.</summary>");
         _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
-        _sb.AppendLine($"{indent}public static implicit operator {_structName}({_aliasedTypeFullName} value) => new {_structName}(value);");
+        _sb.AppendLine($"{indent}public static implicit operator {_typeName}({_aliasedTypeFullName} value) => new {_typeName}(value);");
         _sb.AppendLine();
 
         // Implicit from alias to aliased type
-        _sb.AppendLine($"{indent}/// <summary>Implicitly converts from {_structName} to {_aliasedTypeName}.</summary>");
+        _sb.AppendLine($"{indent}/// <summary>Implicitly converts from {_typeName} to {_aliasedTypeName}.</summary>");
         _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
-        _sb.AppendLine($"{indent}public static implicit operator {_aliasedTypeFullName}({_structName} value) => value._value;");
+        _sb.AppendLine($"{indent}public static implicit operator {_aliasedTypeFullName}({_typeName} value) => value._value;");
         _sb.AppendLine();
     }
 
@@ -214,17 +227,17 @@ internal class AliasCodeGenerator
                 SymbolEqualityComparer.Default.Equals(rightType, _alias.AliasedType))
             {
                 var returnTypeStr = SymbolEqualityComparer.Default.Equals(returnType, _alias.AliasedType)
-                    ? _structName
+                    ? _typeName
                     : returnType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
 
                 _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
-                _sb.AppendLine($"{indent}public static {returnTypeStr} operator {opSymbol}({_structName} left, {_structName} right) => left._value {opSymbol} right._value;");
+                _sb.AppendLine($"{indent}public static {returnTypeStr} operator {opSymbol}({_typeName} left, {_typeName} right) => left._value {opSymbol} right._value;");
                 _sb.AppendLine();
 
                 // Also generate alias op T for cross-type interop
                 // e.g. Position + Velocity works via Position.+(Position, Vector3) with Velocity→Vector3
                 _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
-                _sb.AppendLine($"{indent}public static {returnTypeStr} operator {opSymbol}({_structName} left, {_aliasedTypeFullName} right) => left._value {opSymbol} right;");
+                _sb.AppendLine($"{indent}public static {returnTypeStr} operator {opSymbol}({_typeName} left, {_aliasedTypeFullName} right) => left._value {opSymbol} right;");
                 _sb.AppendLine();
             }
             // Operator with aliased type on right
@@ -233,11 +246,11 @@ internal class AliasCodeGenerator
             {
                 var rightTypeStr = rightType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
                 var returnTypeStr = SymbolEqualityComparer.Default.Equals(returnType, _alias.AliasedType)
-                    ? _structName
+                    ? _typeName
                     : returnType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
 
                 _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
-                _sb.AppendLine($"{indent}public static {returnTypeStr} operator {opSymbol}({_structName} left, {rightTypeStr} right) => left._value {opSymbol} right;");
+                _sb.AppendLine($"{indent}public static {returnTypeStr} operator {opSymbol}({_typeName} left, {rightTypeStr} right) => left._value {opSymbol} right;");
                 _sb.AppendLine();
             }
             // Operator with aliased type on left
@@ -246,11 +259,11 @@ internal class AliasCodeGenerator
             {
                 var leftTypeStr = leftType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
                 var returnTypeStr = SymbolEqualityComparer.Default.Equals(returnType, _alias.AliasedType)
-                    ? _structName
+                    ? _typeName
                     : returnType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
 
                 _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
-                _sb.AppendLine($"{indent}public static {returnTypeStr} operator {opSymbol}({leftTypeStr} left, {_structName} right) => left {opSymbol} right._value;");
+                _sb.AppendLine($"{indent}public static {returnTypeStr} operator {opSymbol}({leftTypeStr} left, {_typeName} right) => left {opSymbol} right._value;");
                 _sb.AppendLine();
             }
         }
@@ -269,24 +282,24 @@ internal class AliasCodeGenerator
             {
                 // Shift operators: left is the type, right is always int
                 _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
-                _sb.AppendLine($"{indent}public static {_structName} operator {opSymbol}({_structName} left, int right) => left._value {opSymbol} right;");
+                _sb.AppendLine($"{indent}public static {_typeName} operator {opSymbol}({_typeName} left, int right) => left._value {opSymbol} right;");
                 _sb.AppendLine();
             }
             else
             {
                 // Alias op Alias
                 _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
-                _sb.AppendLine($"{indent}public static {_structName} operator {opSymbol}({_structName} left, {_structName} right) => left._value {opSymbol} right._value;");
+                _sb.AppendLine($"{indent}public static {_typeName} operator {opSymbol}({_typeName} left, {_typeName} right) => left._value {opSymbol} right._value;");
                 _sb.AppendLine();
 
                 // Alias op T
                 _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
-                _sb.AppendLine($"{indent}public static {_structName} operator {opSymbol}({_structName} left, {_aliasedTypeFullName} right) => left._value {opSymbol} right;");
+                _sb.AppendLine($"{indent}public static {_typeName} operator {opSymbol}({_typeName} left, {_aliasedTypeFullName} right) => left._value {opSymbol} right;");
                 _sb.AppendLine();
 
                 // T op Alias
                 _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
-                _sb.AppendLine($"{indent}public static {_structName} operator {opSymbol}({_aliasedTypeFullName} left, {_structName} right) => left {opSymbol} right._value;");
+                _sb.AppendLine($"{indent}public static {_typeName} operator {opSymbol}({_aliasedTypeFullName} left, {_typeName} right) => left {opSymbol} right._value;");
                 _sb.AppendLine();
             }
         }
@@ -307,11 +320,11 @@ internal class AliasCodeGenerator
 
             var returnType = op.ReturnType;
             var returnTypeStr = SymbolEqualityComparer.Default.Equals(returnType, _alias.AliasedType)
-                ? _structName
+                ? _typeName
                 : returnType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
 
             _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
-            _sb.AppendLine($"{indent}public static {returnTypeStr} operator {opSymbol}({_structName} value) => {opSymbol}value._value;");
+            _sb.AppendLine($"{indent}public static {returnTypeStr} operator {opSymbol}({_typeName} value) => {opSymbol}value._value;");
             _sb.AppendLine();
         }
 
@@ -325,7 +338,7 @@ internal class AliasCodeGenerator
             if (opSymbol == null) continue;
 
             _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
-            _sb.AppendLine($"{indent}public static {_structName} operator {opSymbol}({_structName} value) => {opSymbol}value._value;");
+            _sb.AppendLine($"{indent}public static {_typeName} operator {opSymbol}({_typeName} value) => {opSymbol}value._value;");
             _sb.AppendLine();
         }
     }
@@ -350,7 +363,7 @@ internal class AliasCodeGenerator
             foreach (var op in ops)
             {
                 _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
-                _sb.AppendLine($"{indent}public static bool operator {op}({_structName} left, {_structName} right) => left._value {op} right._value;");
+                _sb.AppendLine($"{indent}public static bool operator {op}({_typeName} left, {_typeName} right) => left._value {op} right._value;");
                 _sb.AppendLine();
             }
 
@@ -370,7 +383,7 @@ internal class AliasCodeGenerator
             foreach (var op in ops)
             {
                 _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
-                _sb.AppendLine($"{indent}public static bool operator {op}({_structName} left, {_structName} right) => {CompareExpr(op)};");
+                _sb.AppendLine($"{indent}public static bool operator {op}({_typeName} left, {_typeName} right) => {CompareExpr(op)};");
                 _sb.AppendLine();
             }
         }
@@ -380,22 +393,29 @@ internal class AliasCodeGenerator
     {
         var indent = GetMemberIndent();
         var isRefType = !_alias.AliasedType.IsValueType;
+        var nullableParam = _isClass ? "?" : "";
 
-        // record structs synthesize Equals, ==, != — skip to avoid CS0111
-        if (!_isRecordStruct)
+        // records synthesize Equals, ==, != — skip to avoid CS0111
+        if (!_isRecord)
         {
             // IEquatable<T>.Equals
-            var equalsExpr = isRefType
-                ? "object.Equals(_value, other._value)"
-                : "_value.Equals(other._value)";
+            string equalsExpr;
+            if (_isClass)
+                equalsExpr = isRefType
+                    ? "other is not null && object.Equals(_value, other._value)"
+                    : "other is not null && _value.Equals(other._value)";
+            else
+                equalsExpr = isRefType
+                    ? "object.Equals(_value, other._value)"
+                    : "_value.Equals(other._value)";
             _sb.AppendLine($"{indent}/// <inheritdoc/>");
             _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
-            _sb.AppendLine($"{indent}public bool Equals({_structName} other) => {equalsExpr};");
+            _sb.AppendLine($"{indent}public bool Equals({_typeName}{nullableParam} other) => {equalsExpr};");
             _sb.AppendLine();
 
             // Object.Equals override
             _sb.AppendLine($"{indent}/// <inheritdoc/>");
-            _sb.AppendLine($"{indent}public override bool Equals(object? obj) => obj is {_structName} other && Equals(other);");
+            _sb.AppendLine($"{indent}public override bool Equals(object? obj) => obj is {_typeName} other && Equals(other);");
             _sb.AppendLine();
 
             // == and != operators: delegate directly to the underlying type's operators
@@ -403,25 +423,36 @@ internal class AliasCodeGenerator
             // and allow the JIT to generate identical codegen.
             var hasNativeEquality = HasNativeEqualityOperator(_alias.AliasedType);
 
-            if (hasNativeEquality)
+            if (_isClass)
             {
+                // Class types need null-safe equality operators
                 _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
-                _sb.AppendLine($"{indent}public static bool operator ==({_structName} left, {_structName} right) => left._value == right._value;");
+                _sb.AppendLine($"{indent}public static bool operator ==({_typeName}? left, {_typeName}? right) => ReferenceEquals(left, right) || (left is not null && left.Equals(right));");
                 _sb.AppendLine();
 
                 _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
-                _sb.AppendLine($"{indent}public static bool operator !=({_structName} left, {_structName} right) => left._value != right._value;");
+                _sb.AppendLine($"{indent}public static bool operator !=({_typeName}? left, {_typeName}? right) => !(left == right);");
+                _sb.AppendLine();
+            }
+            else if (hasNativeEquality)
+            {
+                _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
+                _sb.AppendLine($"{indent}public static bool operator ==({_typeName} left, {_typeName} right) => left._value == right._value;");
+                _sb.AppendLine();
+
+                _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
+                _sb.AppendLine($"{indent}public static bool operator !=({_typeName} left, {_typeName} right) => left._value != right._value;");
                 _sb.AppendLine();
             }
             else
             {
                 // Fallback: route through Equals (for types without native == operator)
                 _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
-                _sb.AppendLine($"{indent}public static bool operator ==({_structName} left, {_structName} right) => left.Equals(right);");
+                _sb.AppendLine($"{indent}public static bool operator ==({_typeName} left, {_typeName} right) => left.Equals(right);");
                 _sb.AppendLine();
 
                 _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
-                _sb.AppendLine($"{indent}public static bool operator !=({_structName} left, {_structName} right) => !left.Equals(right);");
+                _sb.AppendLine($"{indent}public static bool operator !=({_typeName} left, {_typeName} right) => !left.Equals(right);");
                 _sb.AppendLine();
             }
         }
@@ -429,12 +460,18 @@ internal class AliasCodeGenerator
         // IComparable<T>.CompareTo if applicable
         if (ImplementsInterface(_alias.AliasedType, "System.IComparable`1"))
         {
-            var compareExpr = isRefType
-                ? "_value is null ? (other._value is null ? 0 : -1) : _value.CompareTo(other._value)"
-                : "_value.CompareTo(other._value)";
+            string compareExpr;
+            if (_isClass)
+                compareExpr = isRefType
+                    ? "other is null ? 1 : (_value is null ? (other._value is null ? 0 : -1) : _value.CompareTo(other._value))"
+                    : "other is null ? 1 : _value.CompareTo(other._value)";
+            else
+                compareExpr = isRefType
+                    ? "_value is null ? (other._value is null ? 0 : -1) : _value.CompareTo(other._value)"
+                    : "_value.CompareTo(other._value)";
             _sb.AppendLine($"{indent}/// <inheritdoc/>");
             _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
-            _sb.AppendLine($"{indent}public int CompareTo({_structName} other) => {compareExpr};");
+            _sb.AppendLine($"{indent}public int CompareTo({_typeName}{nullableParam} other) => {compareExpr};");
             _sb.AppendLine();
         }
     }
@@ -462,12 +499,12 @@ internal class AliasCodeGenerator
             {
                 // Check if the property returns the aliased type
                 var returnTypeStr = SymbolEqualityComparer.Default.Equals(prop.Type, _alias.AliasedType)
-                    ? _structName
+                    ? _typeName
                     : prop.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
 
                 var needsConversion = SymbolEqualityComparer.Default.Equals(prop.Type, _alias.AliasedType);
                 var valueExpr = needsConversion
-                    ? $"new {_structName}({_aliasedTypeFullName}.{prop.Name})"
+                    ? $"new {_typeName}({_aliasedTypeFullName}.{prop.Name})"
                     : $"{_aliasedTypeFullName}.{prop.Name}";
 
                 _sb.AppendLine($"{indent}/// <summary>Forwards {_aliasedTypeName}.{prop.Name}.</summary>");
@@ -481,12 +518,12 @@ internal class AliasCodeGenerator
             else if (member is IFieldSymbol {IsReadOnly: true} field)
             {
                 var returnTypeStr = SymbolEqualityComparer.Default.Equals(field.Type, _alias.AliasedType)
-                    ? _structName
+                    ? _typeName
                     : field.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
 
                 var needsConversion = SymbolEqualityComparer.Default.Equals(field.Type, _alias.AliasedType);
                 var valueExpr = needsConversion
-                    ? $"new {_structName}({_aliasedTypeFullName}.{field.Name})"
+                    ? $"new {_typeName}({_aliasedTypeFullName}.{field.Name})"
                     : $"{_aliasedTypeFullName}.{field.Name}";
 
                 _sb.AppendLine($"{indent}/// <summary>Forwards {_aliasedTypeName}.{field.Name}.</summary>");
@@ -536,11 +573,11 @@ internal class AliasCodeGenerator
         foreach (var field in instanceFields)
         {
             var returnTypeStr = SymbolEqualityComparer.Default.Equals(field.Type, _alias.AliasedType)
-                ? _structName
+                ? _typeName
                 : field.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
 
             var needsConversion = SymbolEqualityComparer.Default.Equals(field.Type, _alias.AliasedType);
-            var valueExpr = needsConversion ? $"new {_structName}(_value.{field.Name})" : $"_value.{field.Name}";
+            var valueExpr = needsConversion ? $"new {_typeName}(_value.{field.Name})" : $"_value.{field.Name}";
 
             _sb.AppendLine($"{indent}/// <summary>Forwards {_aliasedTypeName}.{field.Name}.</summary>");
             _sb.AppendLine($"{indent}public {returnTypeStr} {field.Name}");
@@ -555,7 +592,7 @@ internal class AliasCodeGenerator
         foreach (var prop in instanceProps)
         {
             var returnTypeStr = SymbolEqualityComparer.Default.Equals(prop.Type, _alias.AliasedType)
-                ? _structName
+                ? _typeName
                 : prop.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
 
             _sb.AppendLine($"{indent}/// <summary>Forwards {_aliasedTypeName}.{prop.Name}.</summary>");
@@ -565,7 +602,7 @@ internal class AliasCodeGenerator
             if (prop.GetMethod != null)
             {
                 var needsConversion = SymbolEqualityComparer.Default.Equals(prop.Type, _alias.AliasedType);
-                var valueExpr = needsConversion ? $"new {_structName}(_value.{prop.Name})" : $"_value.{prop.Name}";
+                var valueExpr = needsConversion ? $"new {_typeName}(_value.{prop.Name})" : $"_value.{prop.Name}";
                 _sb.AppendLine($"{indent}    [MethodImpl(MethodImplOptions.AggressiveInlining)]");
                 _sb.AppendLine($"{indent}    get => {valueExpr};");
             }
@@ -582,7 +619,7 @@ internal class AliasCodeGenerator
             var returnTypeStr = method.ReturnsVoid
                 ? "void"
                 : (SymbolEqualityComparer.Default.Equals(method.ReturnType, _alias.AliasedType) && !skipReturnWrapping)
-                    ? _structName
+                    ? _typeName
                     : method.ReturnType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
 
             var parameters = string.Join(", ", method.Parameters.Select(p =>
@@ -591,7 +628,7 @@ internal class AliasCodeGenerator
                 // out parameters of the aliased type must keep the underlying type
                 // to avoid CS0192 (cannot pass readonly field as ref/out)
                 var paramType = (isAliasedType && p.RefKind != RefKind.Out)
-                    ? _structName
+                    ? _typeName
                     : p.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
                 var refKind = p.RefKind switch
                 {
@@ -623,7 +660,7 @@ internal class AliasCodeGenerator
             var returnExpr = method.ReturnsVoid
                 ? $"_value.{method.Name}({arguments})"
                 : needsReturnConversion
-                    ? $"new {_structName}(_value.{method.Name}({arguments}))"
+                    ? $"new {_typeName}(_value.{method.Name}({arguments}))"
                     : $"_value.{method.Name}({arguments})";
 
             _sb.AppendLine($"{indent}/// <summary>Forwards {_aliasedTypeName}.{method.Name}.</summary>");
@@ -714,7 +751,7 @@ internal class AliasCodeGenerator
 
         _sb.AppendLine($"{indent}/// <summary>Forwards {_aliasedTypeName} constructor.</summary>");
         _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
-        _sb.AppendLine($"{indent}public {_structName}({parameters}) => _value = new {_aliasedTypeFullName}({arguments});");
+        _sb.AppendLine($"{indent}public {_typeName}({parameters}) => _value = new {_aliasedTypeFullName}({arguments});");
         _sb.AppendLine();
     }
 
@@ -792,7 +829,7 @@ internal class AliasCodeGenerator
     private HashSet<string> GetUserDefinedConstructorSignatures()
     {
         var signatures = new HashSet<string>();
-        foreach (var member in _alias.StructSymbol.GetMembers())
+        foreach (var member in _alias.TypeSymbol.GetMembers())
         {
             if (member is IMethodSymbol {MethodKind: MethodKind.Constructor, IsImplicitlyDeclared: false} ctor)
             {

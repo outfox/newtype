@@ -17,10 +17,10 @@ public class AliasGenerator : IIncrementalGenerator
         // Register the attribute source
         context.RegisterPostInitializationOutput(ctx => { ctx.AddSource("newtypeAttribute.g.cs", SourceText.From(NewtypeAttributeSource.Source, Encoding.UTF8)); });
 
-        // Find all struct declarations with our attribute
+        // Find all type declarations with our attribute
         var aliasDeclarations = context.SyntaxProvider
             .CreateSyntaxProvider(
-                predicate: static (node, _) => IsCandidateStruct(node),
+                predicate: static (node, _) => IsCandidateType(node),
                 transform: static (ctx, _) => GetAliasInfo(ctx))
             .Where(static info => info is not null)
             .Select(static (info, _) => info!.Value);
@@ -39,13 +39,15 @@ public class AliasGenerator : IIncrementalGenerator
         });
     }
 
-    private static bool IsCandidateStruct(SyntaxNode node)
+    private static bool IsCandidateType(SyntaxNode node)
     {
         if (node is StructDeclarationSyntax {AttributeLists.Count: > 0} structDecl)
             return structDecl.Modifiers.Any(SyntaxKind.PartialKeyword);
 
-        if (node is RecordDeclarationSyntax {AttributeLists.Count: > 0} recordDecl
-            && recordDecl.ClassOrStructKeyword.IsKind(SyntaxKind.StructKeyword))
+        if (node is ClassDeclarationSyntax {AttributeLists.Count: > 0} classDecl)
+            return classDecl.Modifiers.Any(SyntaxKind.PartialKeyword);
+
+        if (node is RecordDeclarationSyntax {AttributeLists.Count: > 0} recordDecl)
             return recordDecl.Modifiers.Any(SyntaxKind.PartialKeyword);
 
         return false;
@@ -53,10 +55,10 @@ public class AliasGenerator : IIncrementalGenerator
 
     private static AliasInfo? GetAliasInfo(GeneratorSyntaxContext context)
     {
-        var structDecl = (TypeDeclarationSyntax) context.Node;
+        var typeDecl = (TypeDeclarationSyntax) context.Node;
         var semanticModel = context.SemanticModel;
 
-        foreach (var attributeList in structDecl.AttributeLists)
+        foreach (var attributeList in typeDecl.AttributeLists)
         {
             foreach (var attribute in attributeList.Attributes)
             {
@@ -72,31 +74,31 @@ public class AliasGenerator : IIncrementalGenerator
                     attributeType.OriginalDefinition.ToDisplayString() == "newtype.newtypeAttribute<T>")
                 {
                     var aliasedType = attributeType.TypeArguments[0];
-                    var structSymbol = semanticModel.GetDeclaredSymbol(structDecl);
-                    if (structSymbol is null) continue;
+                    var typeSymbol = semanticModel.GetDeclaredSymbol(typeDecl);
+                    if (typeSymbol is null) continue;
 
                     return new AliasInfo(
-                        structDecl,
-                        structSymbol,
+                        typeDecl,
+                        typeSymbol,
                         aliasedType);
                 }
 
                 // Check for non-generic Alias(typeof(T))
                 if (fullName == "newtype.newtypeAttribute")
                 {
-                    var attributeData = semanticModel.GetDeclaredSymbol(structDecl)?
+                    var attributeData = semanticModel.GetDeclaredSymbol(typeDecl)?
                         .GetAttributes()
                         .FirstOrDefault(ad => ad.AttributeClass?.ToDisplayString() == "newtype.newtypeAttribute");
 
                     if (attributeData?.ConstructorArguments.Length > 0 &&
                         attributeData.ConstructorArguments[0].Value is ITypeSymbol aliasedType)
                     {
-                        var structSymbol = semanticModel.GetDeclaredSymbol(structDecl);
-                        if (structSymbol is null) continue;
+                        var typeSymbol = semanticModel.GetDeclaredSymbol(typeDecl);
+                        if (typeSymbol is null) continue;
 
                         return new AliasInfo(
-                            structDecl,
-                            structSymbol,
+                            typeDecl,
+                            typeSymbol,
                             aliasedType);
                     }
                 }
@@ -114,12 +116,12 @@ public class AliasGenerator : IIncrementalGenerator
         var generator = new AliasCodeGenerator(compilation, alias);
         var source = generator.Generate();
 
-        var fileName = $"{alias.StructSymbol.ToDisplayString().Replace(".", "_").Replace("<", "_").Replace(">", "_")}.g.cs";
+        var fileName = $"{alias.TypeSymbol.ToDisplayString().Replace(".", "_").Replace("<", "_").Replace(">", "_")}.g.cs";
         context.AddSource(fileName, SourceText.From(source, Encoding.UTF8));
     }
 }
 
 internal readonly record struct AliasInfo(
-    TypeDeclarationSyntax StructDeclaration,
-    INamedTypeSymbol StructSymbol,
+    TypeDeclarationSyntax TypeDeclaration,
+    INamedTypeSymbol TypeSymbol,
     ITypeSymbol AliasedType);
