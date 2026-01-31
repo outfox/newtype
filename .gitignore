@@ -5,7 +5,7 @@
 *.old.*
 
 # Build Artifacts
-BenchmarkDotNet.Artifacts/
+BenchmarkDotNet.Artifacts*
 /packages
 /.packages
 dist
