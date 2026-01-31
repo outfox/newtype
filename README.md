@@ -11,7 +11,7 @@
 A source generator that creates distinct type aliases with full operator forwarding. Inspired by Haskell's `newtype` and F#'s type abbreviations. `newtype` works for a healthy number of types - many primitives, structs, records, classes work out of the box.
 
 ## Installation
-Just get it from nuget!
+
 ```shell
 dotnet add package newtype
 ```
