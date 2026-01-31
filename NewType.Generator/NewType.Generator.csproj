@@ -19,7 +19,7 @@
     <PackageProjectUrl>https://github.com/outfox/newtype</PackageProjectUrl>
     <RepositoryUrl>https://github.com/outfox/newtype</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
-    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageReadmeFile>NUGET.md</PackageReadmeFile>
     <PackageIcon>icon.png</PackageIcon>
 
     <!-- Important: Include the generator as an analyzer -->
@@ -41,9 +41,9 @@
 
   <!-- Include README and LICENSE in the package -->
   <ItemGroup>
-    <None Include="../README.md" Pack="true" PackagePath="/" />
     <None Include="../LICENSE" Pack="true" PackagePath="/" />
     <None Include="icon.png" Pack="true" PackagePath="/" />
+    <None Include="NUGET.md" Pack="true" PackagePath="/" />
   </ItemGroup>
 
 </Project>
