@@ -477,6 +477,7 @@ internal class AliasCodeGenerator
             .OfType<IMethodSymbol>()
             .Where(m => !m.IsStatic && m.DeclaredAccessibility == Accessibility.Public)
             .Where(m => m.MethodKind == MethodKind.Ordinary)
+            .Where(m => m.CanBeReferencedByName) // Skip compiler-synthesized names like <Clone>$
             .Where(m => !m.Name.StartsWith("get_") && !m.Name.StartsWith("set_"))
             .Where(m => m.Name != "GetHashCode" && m.Name != "Equals" && m.Name != "ToString" && m.Name != "CompareTo")
             .ToList();

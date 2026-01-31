@@ -31,3 +31,12 @@ public readonly partial struct IsActive;
 
 [newtype<string>]
 public readonly partial struct Name;
+
+[newtype<EmailAddress>]
+public readonly partial struct ContactEmail;
+
+[newtype<Money>]
+public readonly partial struct Price;
+
+[newtype<Rgb>]
+public readonly partial struct Tint;
