@@ -10,7 +10,7 @@
     <!-- Emit generated files for inspection -->
     <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
     <CompilerGeneratedFilesOutputPath>$(BaseIntermediateOutputPath)\GeneratedFiles</CompilerGeneratedFilesOutputPath>
-    <RootNamespace>TypeAlias.Tests</RootNamespace>
+    <RootNamespace>newtype.tests</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
