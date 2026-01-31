@@ -51,7 +51,7 @@ Console.WriteLine(p.Length()); // 3.74...
 Position updated = p + v * deltaTime;
 
 // Implicit conversion both ways
-Vector3 vec = p;                              // Position → Vector3
+Vector3 vec = p;              // Position → Vector3
 Position pos = new Vector3(); // Vector3 → Position
 ```
 
