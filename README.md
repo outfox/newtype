@@ -1,4 +1,4 @@
-# NewType - Distinct Type Aliases for C#
+# `newtype` - Distinct Type Aliases for C#
 
 A source generator that creates distinct type aliases with full operator forwarding. Inspired by Haskell's `newtype` and F#'s type abbreviations.
 
