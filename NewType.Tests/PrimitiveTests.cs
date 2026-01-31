@@ -1,3 +1,4 @@
+using System.Globalization;
 using Xunit;
 
 namespace newtype.tests;
@@ -56,8 +57,8 @@ public class PrimitiveTests
         Assert.True(high > low);
         Assert.True(low <= high);
         Assert.True(high >= low);
-        Assert.True(low <= (EntityId)1);
-        Assert.True(low >= (EntityId)1);
+        Assert.True(low <= 1);
+        Assert.True(low >= 1);
     }
 
     [Fact]
@@ -121,10 +122,10 @@ public class PrimitiveTests
         Health a = 80.0f;
         Health damage = 25.0f;
 
-        Health remaining = a - damage;
+        var remaining = a - damage;
         Assert.Equal(55.0f, (float)remaining);
 
-        Health healed = remaining + (Health)10.0f;
+        var healed = remaining + (Health)10.0f;
         Assert.Equal(65.0f, (float)healed);
     }
 
@@ -134,11 +135,11 @@ public class PrimitiveTests
         Health h = 100.0f;
 
         // alias op T
-        Health halfed = h * 0.5f;
-        Assert.Equal(50.0f, (float)halfed);
+        var halved = h * 0.5f;
+        Assert.Equal(50.0f, (float)halved);
 
         // T op alias
-        Health doubled = 2.0f * h;
+        var doubled = 2.0f * h;
         Assert.Equal(200.0f, (float)doubled);
     }
 
@@ -173,7 +174,7 @@ public class PrimitiveTests
     public void Health_ToString()
     {
         Health h = 3.14f;
-        Assert.Equal(3.14f.ToString(), h.ToString());
+        Assert.Equal(3.14f.ToString(CultureInfo.InvariantCulture), h.ToString());
     }
 
     // --- Timestamp (double) ---
@@ -192,10 +193,10 @@ public class PrimitiveTests
         Timestamp start = 100.0;
         Timestamp duration = 42.5;
 
-        Timestamp end = start + duration;
+        var end = start + duration;
         Assert.Equal(142.5, (double)end);
 
-        Timestamp diff = end - start;
+        var diff = end - start;
         Assert.Equal(42.5, (double)diff);
     }
 
@@ -236,7 +237,7 @@ public class PrimitiveTests
         Assert.True(raw);
 
         IsActive inactive = false;
-        Assert.False((bool)inactive);
+        Assert.False(inactive);
     }
 
     [Fact]
@@ -257,26 +258,26 @@ public class PrimitiveTests
         IsActive b = false;
 
         // bool has & and | (non-short-circuit)
-        Assert.False((bool)(a & b));
-        Assert.True((bool)(a | b));
-        Assert.True((bool)(a ^ b));
+        Assert.False(a & b);
+        Assert.True(a | b);
+        Assert.True(a ^ b);
     }
 
     [Fact]
     public void IsActive_Negation()
     {
         IsActive active = true;
-        Assert.False((bool)(!active));
+        Assert.False(!active);
 
         IsActive inactive = false;
-        Assert.True((bool)(!inactive));
+        Assert.True(!inactive);
     }
 
     [Fact]
     public void IsActive_Default()
     {
         IsActive flag = default;
-        Assert.False((bool)flag);
+        Assert.False(flag);
     }
 
     [Fact]
@@ -329,8 +330,8 @@ public class PrimitiveTests
             f = !f;
         }
 
-        Assert.False((bool)flags[0]);
-        Assert.True((bool)flags[1]);
-        Assert.False((bool)flags[2]);
+        Assert.False(flags[0]);
+        Assert.True(flags[1]);
+        Assert.False(flags[2]);
     }
 }

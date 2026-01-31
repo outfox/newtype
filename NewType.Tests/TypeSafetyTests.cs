@@ -33,9 +33,9 @@ public class TypeSafetyTests
         // Simulate: position += velocity * deltaTime
         Position p = new Vector3(0, 0, 0);
         Velocity v = new Vector3(10, 0, 0);
-        float dt = 0.5f;
+        const float dt = 0.5f;
 
-        Position updated = p + (Vector3)v * dt;
+        var updated = p + (Vector3)v * dt;
         Assert.Equal(new Vector3(5, 0, 0), updated.Value);
     }
 

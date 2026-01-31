@@ -16,7 +16,7 @@ public class MatrixAliasTests
     public void IsIdentity_Forwarded()
     {
         Transform t = Matrix4x4.Identity;
-        Assert.True((bool) t.IsIdentity);
+        Assert.True(t.IsIdentity);
     }
 
     [Fact]
@@ -27,7 +27,7 @@ public class MatrixAliasTests
             0, 1, 0, 0,
             0, 0, 1, 0,
             0, 0, 0, 1);
-        Assert.False((bool) t.IsIdentity);
+        Assert.False(t.IsIdentity);
     }
 
     [Fact]

@@ -69,7 +69,7 @@ public class OperatorTests
         Position p = new Vector3(1, 0, 0);
         Velocity v = new Vector3(0, 1, 0);
         // Position + Vector3 works; Velocity implicitly converts to Vector3
-        var result = p + (Vector3)v;
+        var result = p + v;
         Assert.Equal(new Vector3(1, 1, 0), result.Value);
     }
 }

@@ -10,7 +10,7 @@ public class EqualityTests
     {
         Position a = new Vector3(1, 2, 3);
         Position b = new Vector3(1, 2, 3);
-        Assert.True((bool) (a == b));
+        Assert.True(a == b);
     }
 
     [Fact]
@@ -18,7 +18,7 @@ public class EqualityTests
     {
         Position a = new Vector3(1, 2, 3);
         Position b = new Vector3(4, 5, 6);
-        Assert.False((bool) (a == b));
+        Assert.False(a == b);
     }
 
     [Fact]
@@ -26,7 +26,7 @@ public class EqualityTests
     {
         Position a = new Vector3(1, 2, 3);
         Position b = new Vector3(4, 5, 6);
-        Assert.True((bool) (a != b));
+        Assert.True(a != b);
     }
 
     [Fact]
@@ -34,7 +34,7 @@ public class EqualityTests
     {
         Position a = new Vector3(1, 2, 3);
         Position b = new Vector3(1, 2, 3);
-        Assert.False((bool) (a != b));
+        Assert.False(a != b);
     }
 
     [Fact]
@@ -57,6 +57,7 @@ public class EqualityTests
     public void Equals_ObjectOverload_DifferentType()
     {
         Position a = new Vector3(1, 2, 3);
+        // ReSharper disable once SuspiciousTypeConversion.Global
         Assert.False(a.Equals("not a position"));
     }
 

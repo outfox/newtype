@@ -16,14 +16,14 @@ public class QuaternionAliasTests
     public void IsIdentity_Forwarded()
     {
         Rotation r = Quaternion.Identity;
-        Assert.True((bool) r.IsIdentity);
+        Assert.True(r.IsIdentity);
     }
 
     [Fact]
     public void IsIdentity_FalseForNonIdentity()
     {
         Rotation r = new Quaternion(1, 0, 0, 1);
-        Assert.False((bool) r.IsIdentity);
+        Assert.False(r.IsIdentity);
     }
 
     [Fact]
