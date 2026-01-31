@@ -2,7 +2,6 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
-using System.Collections.Immutable;
 using System.Text;
 
 namespace newtype.generator;
@@ -18,7 +17,7 @@ public class AliasGenerator : IIncrementalGenerator
         // Register the attribute source
         context.RegisterPostInitializationOutput(ctx =>
         {
-            ctx.AddSource("newtypeAttribute.g.cs", SourceText.From(newtypeAttributeSource.Source, Encoding.UTF8));
+            ctx.AddSource("newtypeAttribute.g.cs", SourceText.From(NewtypeAttributeSource.Source, Encoding.UTF8));
         });
 
         // Find all struct declarations with our attribute
@@ -45,8 +44,7 @@ public class AliasGenerator : IIncrementalGenerator
 
     private static bool IsCandidateStruct(SyntaxNode node)
     {
-        return node is StructDeclarationSyntax structDecl &&
-               structDecl.AttributeLists.Count > 0 &&
+        return node is StructDeclarationSyntax {AttributeLists.Count: > 0} structDecl &&
                structDecl.Modifiers.Any(SyntaxKind.PartialKeyword);
     }
 

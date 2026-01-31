@@ -8,6 +8,7 @@ namespace newtype.generator;
 /// </summary>
 internal class AliasCodeGenerator
 {
+    // ReSharper disable once NotAccessedField.Local
     private readonly Compilation _compilation;
     private readonly AliasInfo _alias;
     private readonly StringBuilder _sb = new();
@@ -432,7 +433,7 @@ internal class AliasCodeGenerator
                 _sb.AppendLine($"{indent}}}");
                 _sb.AppendLine();
             }
-            else if (member is IFieldSymbol field && field.IsReadOnly)
+            else if (member is IFieldSymbol {IsReadOnly: true} field)
             {
                 var returnTypeStr = SymbolEqualityComparer.Default.Equals(field.Type, _alias.AliasedType)
                     ? _structName
@@ -461,7 +462,7 @@ internal class AliasCodeGenerator
         // Get instance fields (e.g. Vector3.X, Y, Z are fields, not properties)
         var instanceFields = aliasedType.GetMembers()
             .OfType<IFieldSymbol>()
-            .Where(f => !f.IsStatic && !f.IsImplicitlyDeclared && f.DeclaredAccessibility == Accessibility.Public)
+            .Where(f => !f.IsStatic && f is {IsImplicitlyDeclared: false, DeclaredAccessibility: Accessibility.Public})
             .ToList();
 
         // Get instance properties
@@ -581,15 +582,13 @@ internal class AliasCodeGenerator
 
             _sb.AppendLine($"{indent}/// <summary>Forwards {_aliasedTypeName}.{method.Name}.</summary>");
             _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
+
+            _sb.AppendLine(
+                method.ReturnsVoid 
+                    ? $"{indent}public void {method.Name}({parameters}) => {returnExpr};" 
+                    : $"{indent}public {returnTypeStr} {method.Name}({parameters}) => {returnExpr};"
+                );
             
-            if (method.ReturnsVoid)
-            {
-                _sb.AppendLine($"{indent}public void {method.Name}({parameters}) => {returnExpr};");
-            }
-            else
-            {
-                _sb.AppendLine($"{indent}public {returnTypeStr} {method.Name}({parameters}) => {returnExpr};");
-            }
             _sb.AppendLine();
         }
 
@@ -692,21 +691,21 @@ internal class AliasCodeGenerator
             case SpecialType.System_UInt16:
             case SpecialType.System_UInt32:
             case SpecialType.System_UInt64:
-                return new[]
-                {
+                return
+                [
                     "op_Addition", "op_Subtraction", "op_Multiply", "op_Division", "op_Modulus",
-                    "op_BitwiseAnd", "op_BitwiseOr", "op_ExclusiveOr", "op_LeftShift", "op_RightShift"
-                };
+                    "op_BitwiseAnd", "op_BitwiseOr", "op_ExclusiveOr", "op_LeftShift", "op_RightShift",
+                ];
             case SpecialType.System_Single:
             case SpecialType.System_Double:
             case SpecialType.System_Decimal:
-                return new[] { "op_Addition", "op_Subtraction", "op_Multiply", "op_Division", "op_Modulus" };
+                return ["op_Addition", "op_Subtraction", "op_Multiply", "op_Division", "op_Modulus"];
             case SpecialType.System_Boolean:
-                return new[] { "op_BitwiseAnd", "op_BitwiseOr", "op_ExclusiveOr" };
+                return ["op_BitwiseAnd", "op_BitwiseOr", "op_ExclusiveOr"];
             case SpecialType.System_String:
-                return new[] { "op_Addition" };
+                return ["op_Addition"];
             default:
-                return Array.Empty<string>();
+                return [];
         }
     }
 
@@ -721,20 +720,20 @@ internal class AliasCodeGenerator
             case SpecialType.System_Int64:
             case SpecialType.System_Int16:
             case SpecialType.System_SByte:
-                return new[] { "op_UnaryNegation", "op_UnaryPlus", "op_OnesComplement" };
+                return ["op_UnaryNegation", "op_UnaryPlus", "op_OnesComplement"];
             case SpecialType.System_Byte:
             case SpecialType.System_UInt16:
             case SpecialType.System_UInt32:
             case SpecialType.System_UInt64:
-                return new[] { "op_UnaryPlus", "op_OnesComplement" };
+                return ["op_UnaryPlus", "op_OnesComplement"];
             case SpecialType.System_Single:
             case SpecialType.System_Double:
             case SpecialType.System_Decimal:
-                return new[] { "op_UnaryNegation", "op_UnaryPlus" };
+                return ["op_UnaryNegation", "op_UnaryPlus"];
             case SpecialType.System_Boolean:
-                return new[] { "op_LogicalNot" };
+                return ["op_LogicalNot"];
             default:
-                return Array.Empty<string>();
+                return [];
         }
     }
 

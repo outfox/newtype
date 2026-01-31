@@ -3,10 +3,10 @@ namespace newtype.generator;
 /// <summary>
 /// Source text for the [Alias] attribute that gets injected into user compilations.
 /// </summary>
-internal static class newtypeAttributeSource
+internal static class NewtypeAttributeSource
 {
-    public const string AttributeName = "newtypeAttribute";
-    public const string AttributeNamespace = "newtype";
+    private const string AttributeName = "newtypeAttribute";
+    private const string AttributeNamespace = "newtype";
     public const string FullyQualifiedName = $"{AttributeNamespace}.{AttributeName}";
     public const string GenericAttributeName = "newtypeAttribute`1";
     
