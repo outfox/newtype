@@ -5,7 +5,7 @@ using Microsoft.CodeAnalysis.Text;
 using System.Collections.Immutable;
 using System.Text;
 
-namespace newtype.Generator;
+namespace newtype.generator;
 
 /// <summary>
 /// Incremental source generator that creates type alias implementations.

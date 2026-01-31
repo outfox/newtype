@@ -1,6 +1,8 @@
 using System.Numerics;
 using Xunit;
 
+namespace newtype.tests;
+
 public class ConstructionTests
 {
     [Fact]

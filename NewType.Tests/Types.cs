@@ -1,5 +1,6 @@
 using System.Numerics;
-using newtype;
+
+namespace newtype.tests;
 
 [newtype<Vector3>]
 public readonly partial struct Position;

@@ -1,6 +1,8 @@
 using System.Numerics;
 using Xunit;
 
+namespace newtype.tests;
+
 public class EqualityTests
 {
     [Fact]
@@ -8,7 +10,7 @@ public class EqualityTests
     {
         Position a = new Vector3(1, 2, 3);
         Position b = new Vector3(1, 2, 3);
-        Assert.True(a == b);
+        Assert.True((bool) (a == b));
     }
 
     [Fact]
@@ -16,7 +18,7 @@ public class EqualityTests
     {
         Position a = new Vector3(1, 2, 3);
         Position b = new Vector3(4, 5, 6);
-        Assert.False(a == b);
+        Assert.False((bool) (a == b));
     }
 
     [Fact]
@@ -24,7 +26,7 @@ public class EqualityTests
     {
         Position a = new Vector3(1, 2, 3);
         Position b = new Vector3(4, 5, 6);
-        Assert.True(a != b);
+        Assert.True((bool) (a != b));
     }
 
     [Fact]
@@ -32,7 +34,7 @@ public class EqualityTests
     {
         Position a = new Vector3(1, 2, 3);
         Position b = new Vector3(1, 2, 3);
-        Assert.False(a != b);
+        Assert.False((bool) (a != b));
     }
 
     [Fact]

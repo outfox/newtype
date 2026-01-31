@@ -1,6 +1,8 @@
 using System.Numerics;
 using Xunit;
 
+namespace newtype.tests;
+
 public class MatrixAliasTests
 {
     [Fact]
@@ -14,7 +16,7 @@ public class MatrixAliasTests
     public void IsIdentity_Forwarded()
     {
         Transform t = Matrix4x4.Identity;
-        Assert.True(t.IsIdentity);
+        Assert.True((bool) t.IsIdentity);
     }
 
     [Fact]
@@ -25,7 +27,7 @@ public class MatrixAliasTests
             0, 1, 0, 0,
             0, 0, 1, 0,
             0, 0, 0, 1);
-        Assert.False(t.IsIdentity);
+        Assert.False((bool) t.IsIdentity);
     }
 
     [Fact]

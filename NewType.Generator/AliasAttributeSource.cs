@@ -1,4 +1,4 @@
-namespace newtype.Generator;
+namespace newtype.generator;
 
 /// <summary>
 /// Source text for the [Alias] attribute that gets injected into user compilations.

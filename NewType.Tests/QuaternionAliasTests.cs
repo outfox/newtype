@@ -1,6 +1,8 @@
 using System.Numerics;
 using Xunit;
 
+namespace newtype.tests;
+
 public class QuaternionAliasTests
 {
     [Fact]
@@ -14,14 +16,14 @@ public class QuaternionAliasTests
     public void IsIdentity_Forwarded()
     {
         Rotation r = Quaternion.Identity;
-        Assert.True(r.IsIdentity);
+        Assert.True((bool) r.IsIdentity);
     }
 
     [Fact]
     public void IsIdentity_FalseForNonIdentity()
     {
         Rotation r = new Quaternion(1, 0, 0, 1);
-        Assert.False(r.IsIdentity);
+        Assert.False((bool) r.IsIdentity);
     }
 
     [Fact]
