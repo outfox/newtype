@@ -1,5 +1,8 @@
 # `newtype` - Type Aliases for C#
 
+[![.NET](https://github.com/outfox/newtype/actions/workflows/dotnet.yml/badge.svg)](https://github.com/outfox/newtype/actions/workflows/dotnet.yml)
+[![Discord](https://img.shields.io/badge/Discord-Join-7289da?logo=discord&logoColor=white)](https://discord.gg/65fJ4g6YQm)
+
 A source generator that creates distinct type aliases with full operator forwarding. Inspired by Haskell's `newtype` and F#'s type abbreviations.
 
 <p align="center">
