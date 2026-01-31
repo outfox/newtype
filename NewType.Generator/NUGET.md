@@ -1,34 +1,43 @@
-# `newtype` - Type Aliases for C#
-
-A source generator that creates distinct type aliases with full operator forwarding. Inspired by Haskell's `newtype` and
-F#'s type abbreviations.
+# `newtype` (Distinct Type Aliases for C#)
 
 ![logo, a stylized N with a red and Blue half](https://raw.githubusercontent.com/outfox/newtype/main/logo.svg)
 
-`newtype` works for a healthy number of types - many primitives, structs, records, classes work out of the box.
+A source generator that creates distinct type aliases with full operator forwarding. Inspired by Haskell's `newtype` and
+F#'s type abbreviations. `newtype` works for a healthy number of types - many primitives, structs, records, classes work out of the box.
 
 ## Installation
 
-> `dotnet add package newtype`
+```shell
+dotnet add package newtype
+````
 
 ## Usage
 
-- Basic: strongly typed `string`-names, `int`-IDs, and `int`-counts
-- Typical: quantities backed by the same data type. For example, forces, velocities, positions, etc. all lose their
-  semantics when expressed as `Vector3`
-
-```cs
+#### Basic: strongly typed `string`-names, `int`-IDs, and `int`-counts
+```csharp
 using newtype;
 
-[newtype<System.Numerics.Vector3>]
+[newtype<int>]
+public readonly partial struct Pizzas;
+
+[newtype<double>]
+public readonly partial struct Fullness;
+```
+
+#### Typical: quantities backed by the same data type. 
+*For example, forces, velocities, positions, etc. all lose their semantics when expressed as `Vector3`*
+```csharp
+using System.Numerics;
+
+[newtype<Vector3>]
 public readonly partial struct Position;
 
-[newtype<System.Numerics.Vector3>]
+[newtype<Vector3>]
 public readonly partial struct Velocity;
 
 // Now Position and Velocity are distinct types that behave like Vector3
-var p = new Position(new System.Numerics.Vector3(1, 2, 3));
-var v = new Velocity(new System.Numerics.Vector3(0.1f, 0, 0));
+var p = new Position(1, 2, 3);
+var v = new Velocity(new Vector3(0.1f, 0, 0)); // may also construct from aliased type
 
 // Static members are forwarded
 Console.WriteLine(Position.UnitX);  // (1, 0, 0)
@@ -43,7 +52,7 @@ Position updated = p + v * deltaTime;
 
 // Implicit conversion both ways
 Vector3 vec = p;                              // Position → Vector3
-Position pos = new System.Numerics.Vector3(); // Vector3 → Position
+Position pos = new Vector3(); // Vector3 → Position
 ```
 
 Design patterns such as [Entity-Component Systems](https://github.com/outfox/fennecs) benefit greatly from sleek type
@@ -93,7 +102,7 @@ For each `[newtype<T>]` decorated struct, the generator creates:
 
 This generator uses **implicit conversion** both ways. This means:
 
-```cs
+```csharp
 Position p = new Vector3(1, 2, 3);  // ✓ Works
 Vector3 v = p;                       // ✓ Works
 Position p2 = p + velocity;          // ✓ Works (via Vector3 arithmetic)
@@ -102,7 +111,7 @@ Position p2 = p + velocity;          // ✓ Works (via Vector3 arithmetic)
 This is intentional for System.Numerics types where you want the arithmetic to "just work". The type safety comes from *
 *distinct types at API boundaries**:
 
-```cs
+```csharp
 // Your API enforces type safety
 void ApplyForce(Position target, Velocity force) { ... }
 
@@ -116,7 +125,7 @@ ApplyForce(velocity, position);  // ✗ Compile error!
 If you want stricter type safety (no implicit mixing in arithmetic), modify the generator to use `explicit` operators
 instead. Then:
 
-```cs
+```csharp
 Position p = (Position)new Vector3(1, 2, 3);  // Must be explicit
 Position p2 = (Position)(p.Value + v.Value);   // Must unwrap for arithmetic
 ```
@@ -163,7 +172,7 @@ You can extend your partial class with needed additional methods and conversions
 
 If you want `Position + Velocity → Position` without going through `Vector3`, you can add partial methods:
 
-```cs
+```csharp
 [newtype<Vector3>]
 public readonly partial struct Position
 {
@@ -179,7 +188,7 @@ A simple `Validate` partial method pattern if you want runtime validation.
 
 (note: would need generator modification to call this from constructor, but one might consider a factory method)
 
-```cs
+```csharp
 [newtype<Vector3>]
 public readonly partial struct Position
 {
