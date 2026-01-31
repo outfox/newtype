@@ -5,7 +5,7 @@ using Microsoft.CodeAnalysis.Text;
 using System.Collections.Immutable;
 using System.Text;
 
-namespace TypeAlias.Generator;
+namespace newtype.Generator;
 
 /// <summary>
 /// Incremental source generator that creates type alias implementations.
@@ -68,7 +68,7 @@ public class AliasGenerator : IIncrementalGenerator
 
                 // Check for generic Alias<T>
                 if (attributeType.IsGenericType &&
-                    attributeType.OriginalDefinition.ToDisplayString() == "TypeAlias.newtypeAttribute<T>")
+                    attributeType.OriginalDefinition.ToDisplayString() == "newtype.newtypeAttribute<T>")
                 {
                     var aliasedType = attributeType.TypeArguments[0];
                     var structSymbol = semanticModel.GetDeclaredSymbol(structDecl);
@@ -81,11 +81,11 @@ public class AliasGenerator : IIncrementalGenerator
                 }
 
                 // Check for non-generic Alias(typeof(T))
-                if (fullName == "TypeAlias.newtypeAttribute")
+                if (fullName == "newtype.newtypeAttribute")
                 {
                     var attributeData = semanticModel.GetDeclaredSymbol(structDecl)?
                         .GetAttributes()
-                        .FirstOrDefault(ad => ad.AttributeClass?.ToDisplayString() == "TypeAlias.newtypeAttribute");
+                        .FirstOrDefault(ad => ad.AttributeClass?.ToDisplayString() == "newtype.newtypeAttribute");
 
                     if (attributeData?.ConstructorArguments.Length > 0 &&
                         attributeData.ConstructorArguments[0].Value is ITypeSymbol aliasedType)

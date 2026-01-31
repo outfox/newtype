@@ -1,5 +1,5 @@
 using System.Numerics;
-using TypeAlias;
+using newtype;
 
 // Define our distinct types
 [newtype<Vector3>]

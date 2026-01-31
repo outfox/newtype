@@ -8,10 +8,10 @@ A source generator that creates distinct type aliases with full operator forward
 using System.Numerics;
 using TypeAlias;
 
-[Alias<Vector3>]
+[newtype<Vector3>]
 public readonly partial struct Position;
 
-[Alias<Vector3>]
+[newtype<Vector3>]
 public readonly partial struct Velocity;
 
 // Now Position and Velocity are distinct types that behave like Vector3
@@ -36,7 +36,7 @@ Position pos = new Vector3(); // Vector3 → Position
 
 ## What Gets Generated
 
-For each `[Alias<T>]` decorated struct, the generator creates:
+For each `[newtype<T>]` decorated struct, the generator creates:
 
 ### Core Members
 - `private readonly T _value` - The backing field
@@ -132,7 +132,7 @@ Then check `obj/GeneratedFiles/` after building.
 ## Requirements
 
 - .NET 7+ SDK (for building the generator)
-- C# 11+ (for generic attributes `[Alias<T>]`)
+- C# 11+ (for generic attributes `[newtype<T>]`)
 - Target framework can be anything supported by your SDK
 
 ## License
@@ -146,7 +146,7 @@ MIT - do whatever you want with it.
 If you want `Position + Velocity → Position` without going through `Vector3`, you can add partial methods:
 
 ```csharp
-[Alias<Vector3>]
+[newtype<Vector3>]
 public readonly partial struct Position
 {
     // Add custom cross-type operation
@@ -160,7 +160,7 @@ public readonly partial struct Position
 Add a `Validate` partial method pattern if you want runtime validation:
 
 ```csharp
-[Alias<Vector3>]
+[newtype<Vector3>]
 public readonly partial struct Position
 {
     partial void Validate()

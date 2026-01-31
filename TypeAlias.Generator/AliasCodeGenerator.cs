@@ -1,7 +1,7 @@
 using Microsoft.CodeAnalysis;
 using System.Text;
 
-namespace TypeAlias.Generator;
+namespace newtype.Generator;
 
 /// <summary>
 /// Generates the implementation code for a type alias.

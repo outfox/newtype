@@ -9,7 +9,7 @@
     <IsRoslynComponent>true</IsRoslynComponent>
     
     <!-- NuGet package properties -->
-    <PackageId>TypeAlias.Generator</PackageId>
+    <PackageId>newtype.Generator</PackageId>
     <Version>0.1.0</Version>
     <Authors>Tiger</Authors>
     <Description>Source generator for creating distinct type aliases with full operator forwarding</Description>
