@@ -1,20 +1,19 @@
 # `newtype` - Type Aliases for C#
 
-[![.NET](https://github.com/outfox/newtype/actions/workflows/dotnet.yml/badge.svg)](https://github.com/outfox/newtype/actions/workflows/dotnet.yml)
-[![Discord](https://img.shields.io/badge/Discord-Join-7289da?logo=discord&logoColor=white)](https://discord.gg/65fJ4g6YQm)
-
-A source generator that creates distinct type aliases with full operator forwarding. Inspired by Haskell's `newtype` and F#'s type abbreviations.
-
 <p align="center">
   <img src="logo.svg" alt="logo, a stylized N with a red and Blue half" width="30%">
 </p>
 
-`newtype` works for a healthy number of types - many primitives, structs, records, classes work out of the box.
+[![.NET](https://github.com/outfox/newtype/actions/workflows/dotnet.yml/badge.svg)](https://github.com/outfox/newtype/actions/workflows/dotnet.yml)
+[![Discord](https://img.shields.io/badge/Discord-Join-7289da?logo=discord&logoColor=white)](https://discord.gg/65fJ4g6YQm)
 
+A source generator that creates distinct type aliases with full operator forwarding. Inspired by Haskell's `newtype` and F#'s type abbreviations. It works for a healthy number of types - many primitives, structs, records, classes work out of the box.
 
 ## Installation
-
-> `dotnet add package newtype`
+Just get it from nuget!
+```shell
+dotnet add package newtype
+```
 
 ## Usage
 - Basic: strongly typed `string`-names, `int`-IDs, and `int`-counts
