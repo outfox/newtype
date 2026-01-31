@@ -6,7 +6,6 @@
 
 [![Discord Invite](https://img.shields.io/badge/discord-_%E2%A4%9Coutfox%E2%A4%8F-blue?logo=discord&logoColor=f5f5f5)](https://discord.gg/65fJ4g6YQm)
 [![NuGet](https://img.shields.io/nuget/v/newtype?color=blue)](https://www.nuget.org/packages/newtype/)
-[![NuGet Downloads](https://img.shields.io/nuget/dt/newtype)](https://www.nuget.org/packages/newtype/)
 [![Build Status](https://github.com/outfox/newtype/actions/workflows/dotnet.yml/badge.svg)](https://github.com/outfox/newtype/actions/workflows/dotnet.yml)
 
 A source generator that creates distinct type aliases with full operator forwarding. Inspired by Haskell's `newtype` and F#'s type abbreviations. `newtype` works for a healthy number of types - many primitives, structs, records, classes work out of the box.
