@@ -1,6 +1,8 @@
 using System.Numerics;
 using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Columns;
 using BenchmarkDotNet.Configs;
+using BenchmarkDotNet.Diagnosers;
 
 namespace newtype.benchmark;
 
@@ -9,18 +11,18 @@ namespace newtype.benchmark;
 [CategoriesColumn]
 [DisassemblyDiagnoser(maxDepth: 2)]
 [ShortRunJob]
-public class Vector3ArithmeticBenchmarks
+public class Vector2ArithmeticBenchmarks
 {
-    private Vector3 _rawA, _rawB;
+    private Vector2 _rawA, _rawB;
     private float _scalar;
-    private Position _aliasA, _aliasB;
+    private Position2 _aliasA, _aliasB;
 
     [GlobalSetup]
     public void Setup()
     {
         var t = Environment.TickCount;
-        _rawA = new Vector3(t, t + 1, t + 2);
-        _rawB = new Vector3(t + 3, t + 4, t + 5);
+        _rawA = new Vector2(t, t + 1);
+        _rawB = new Vector2(t + 3, t + 4);
         _scalar = t * 0.01f;
         _aliasA = _rawA;
         _aliasB = _rawB;
@@ -28,31 +30,31 @@ public class Vector3ArithmeticBenchmarks
 
     // --- Addition ---
     [Benchmark(Baseline = true), BenchmarkCategory("Add")]
-    public Vector3 Add_Raw() => _rawA + _rawB;
+    public Vector2 Add_Raw() => _rawA + _rawB;
 
     [Benchmark, BenchmarkCategory("Add")]
-    public Position Add_Alias() => _aliasA + _aliasB;
+    public Position2 Add_Alias() => _aliasA + _aliasB;
 
     // --- Subtraction ---
     [Benchmark(Baseline = true), BenchmarkCategory("Sub")]
-    public Vector3 Sub_Raw() => _rawA - _rawB;
+    public Vector2 Sub_Raw() => _rawA - _rawB;
 
     [Benchmark, BenchmarkCategory("Sub")]
-    public Position Sub_Alias() => _aliasA - _aliasB;
+    public Position2 Sub_Alias() => _aliasA - _aliasB;
 
     // --- Scalar Multiply ---
     [Benchmark(Baseline = true), BenchmarkCategory("ScalarMul")]
-    public Vector3 ScalarMul_Raw() => _rawA * _scalar;
+    public Vector2 ScalarMul_Raw() => _rawA * _scalar;
 
     [Benchmark, BenchmarkCategory("ScalarMul")]
-    public Position ScalarMul_Alias() => _aliasA * _scalar;
+    public Position2 ScalarMul_Alias() => _aliasA * _scalar;
 
     // --- Negation ---
     [Benchmark(Baseline = true), BenchmarkCategory("Neg")]
-    public Vector3 Neg_Raw() => -_rawA;
+    public Vector2 Neg_Raw() => -_rawA;
 
     [Benchmark, BenchmarkCategory("Neg")]
-    public Position Neg_Alias() => -_aliasA;
+    public Position2 Neg_Alias() => -_aliasA;
 
     // --- Equality ---
     [Benchmark(Baseline = true), BenchmarkCategory("Eq")]

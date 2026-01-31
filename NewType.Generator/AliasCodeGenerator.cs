@@ -327,10 +327,30 @@ internal class AliasCodeGenerator
     {
         var indent = GetMemberIndent();
 
-        // Check if the type already has comparison operators
+        // Check if the type already has comparison operators (user-defined)
         var hasLessThan = GetBinaryOperators(_alias.AliasedType).Any(o => o.Name == "op_LessThan");
 
-        if (!hasLessThan && ImplementsInterface(_alias.AliasedType, "System.IComparable`1"))
+        if (hasLessThan)
+        {
+            // Type has user-defined comparison operators — already forwarded by AppendBinaryOperators
+            return;
+        }
+
+        // For primitives with built-in comparison, use direct operators (avoids CompareTo overhead)
+        if (HasBuiltInComparisonOperators(_alias.AliasedType.SpecialType))
+        {
+            string[] ops = ["<", ">", "<=", ">="];
+            foreach (var op in ops)
+            {
+                _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
+                _sb.AppendLine($"{indent}public static bool operator {op}({_structName} left, {_structName} right) => left._value {op} right._value;");
+                _sb.AppendLine();
+            }
+            return;
+        }
+
+        // Fallback: use IComparable<T>.CompareTo for types without native comparison
+        if (ImplementsInterface(_alias.AliasedType, "System.IComparable`1"))
         {
             var isRefType = !_alias.AliasedType.IsValueType;
 
@@ -338,22 +358,13 @@ internal class AliasCodeGenerator
                 ? $"(left._value is null ? (right._value is null ? 0 : -1) : left._value.CompareTo(right._value)) {op} 0"
                 : $"left._value.CompareTo(right._value) {op} 0";
 
-            // Generate comparison operators using IComparable
-            _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
-            _sb.AppendLine($"{indent}public static bool operator <({_structName} left, {_structName} right) => {CompareExpr("<")};");
-            _sb.AppendLine();
-
-            _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
-            _sb.AppendLine($"{indent}public static bool operator >({_structName} left, {_structName} right) => {CompareExpr(">")};");
-            _sb.AppendLine();
-
-            _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
-            _sb.AppendLine($"{indent}public static bool operator <=({_structName} left, {_structName} right) => {CompareExpr("<=")};");
-            _sb.AppendLine();
-
-            _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
-            _sb.AppendLine($"{indent}public static bool operator >=({_structName} left, {_structName} right) => {CompareExpr(">=")};");
-            _sb.AppendLine();
+            string[] ops = ["<", ">", "<=", ">="];
+            foreach (var op in ops)
+            {
+                _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
+                _sb.AppendLine($"{indent}public static bool operator {op}({_structName} left, {_structName} right) => {CompareExpr(op)};");
+                _sb.AppendLine();
+            }
         }
     }
 
@@ -379,15 +390,32 @@ internal class AliasCodeGenerator
             _sb.AppendLine($"{indent}public override bool Equals(object? obj) => obj is {_structName} other && Equals(other);");
             _sb.AppendLine();
 
-            // == operator
-            _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
-            _sb.AppendLine($"{indent}public static bool operator ==({_structName} left, {_structName} right) => left.Equals(right);");
-            _sb.AppendLine();
+            // == and != operators: delegate directly to the underlying type's operators
+            // when available, to preserve exact semantics (e.g. NaN handling for floats)
+            // and allow the JIT to generate identical codegen.
+            var hasNativeEquality = HasNativeEqualityOperator(_alias.AliasedType);
 
-            // != operator
-            _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
-            _sb.AppendLine($"{indent}public static bool operator !=({_structName} left, {_structName} right) => !left.Equals(right);");
-            _sb.AppendLine();
+            if (hasNativeEquality)
+            {
+                _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
+                _sb.AppendLine($"{indent}public static bool operator ==({_structName} left, {_structName} right) => left._value == right._value;");
+                _sb.AppendLine();
+
+                _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
+                _sb.AppendLine($"{indent}public static bool operator !=({_structName} left, {_structName} right) => left._value != right._value;");
+                _sb.AppendLine();
+            }
+            else
+            {
+                // Fallback: route through Equals (for types without native == operator)
+                _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
+                _sb.AppendLine($"{indent}public static bool operator ==({_structName} left, {_structName} right) => left.Equals(right);");
+                _sb.AppendLine();
+
+                _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
+                _sb.AppendLine($"{indent}public static bool operator !=({_structName} left, {_structName} right) => !left.Equals(right);");
+                _sb.AppendLine();
+            }
         }
 
         // IComparable<T>.CompareTo if applicable
@@ -753,6 +781,43 @@ internal class AliasCodeGenerator
     private static bool IsShiftOperator(string opName)
     {
         return opName == "op_LeftShift" || opName == "op_RightShift";
+    }
+
+    /// <summary>
+    /// Returns true if the type has a native == operator (user-defined or built-in primitive).
+    /// When true, operator == should delegate directly to _value == other._value
+    /// to preserve exact semantics (e.g. NaN handling) and generate optimal codegen.
+    /// </summary>
+    private bool HasNativeEqualityOperator(ITypeSymbol type)
+    {
+        // User-defined operator ==
+        if (GetBinaryOperators(type).Any(o => o.Name == "op_Equality"))
+            return true;
+
+        // Built-in == for primitives
+        return type.SpecialType is
+            SpecialType.System_Boolean or
+            SpecialType.System_Byte or SpecialType.System_SByte or
+            SpecialType.System_Int16 or SpecialType.System_UInt16 or
+            SpecialType.System_Int32 or SpecialType.System_UInt32 or
+            SpecialType.System_Int64 or SpecialType.System_UInt64 or
+            SpecialType.System_Single or SpecialType.System_Double or
+            SpecialType.System_Decimal or SpecialType.System_Char or
+            SpecialType.System_String;
+    }
+
+    /// <summary>
+    /// Returns true if the primitive type has built-in comparison operators (&lt;, &gt;, etc.).
+    /// </summary>
+    private static bool HasBuiltInComparisonOperators(SpecialType specialType)
+    {
+        return specialType is
+            SpecialType.System_Byte or SpecialType.System_SByte or
+            SpecialType.System_Int16 or SpecialType.System_UInt16 or
+            SpecialType.System_Int32 or SpecialType.System_UInt32 or
+            SpecialType.System_Int64 or SpecialType.System_UInt64 or
+            SpecialType.System_Single or SpecialType.System_Double or
+            SpecialType.System_Decimal or SpecialType.System_Char;
     }
 
     private bool ImplementsInterface(ITypeSymbol type, string interfaceFullName)
