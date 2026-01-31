@@ -4,7 +4,7 @@ A source generator that creates distinct type aliases with full operator forward
 
 ## Usage
 
-```csharp
+```cs
 using newtype;
 
 [newtype<System.Numerics.Vector3>]
@@ -71,7 +71,7 @@ For each `[newtype<T>]` decorated struct, the generator creates:
 
 This generator uses **implicit conversion** both ways. This means:
 
-```csharp
+```cs
 Position p = new Vector3(1, 2, 3);  // ✓ Works
 Vector3 v = p;                       // ✓ Works
 Position p2 = p + velocity;          // ✓ Works (via Vector3 arithmetic)
@@ -79,7 +79,7 @@ Position p2 = p + velocity;          // ✓ Works (via Vector3 arithmetic)
 
 This is intentional for System.Numerics types where you want the arithmetic to "just work". The type safety comes from **distinct types at API boundaries**:
 
-```csharp
+```cs
 // Your API enforces type safety
 void ApplyForce(Position target, Velocity force) { ... }
 
@@ -92,7 +92,7 @@ ApplyForce(velocity, position);  // ✗ Compile error!
 
 If you want stricter type safety (no implicit mixing in arithmetic), modify the generator to use `explicit` operators instead. Then:
 
-```csharp
+```cs
 Position p = (Position)new Vector3(1, 2, 3);  // Must be explicit
 Position p2 = (Position)(p.Value + v.Value);   // Must unwrap for arithmetic
 ```
@@ -136,7 +136,7 @@ MIT - do whatever you want with it.
 
 If you want `Position + Velocity → Position` without going through `Vector3`, you can add partial methods:
 
-```csharp
+```cs
 [newtype<Vector3>]
 public readonly partial struct Position
 {
@@ -150,7 +150,7 @@ public readonly partial struct Position
 
 Add a `Validate` partial method pattern if you want runtime validation:
 
-```csharp
+```cs
 [newtype<Vector3>]
 public readonly partial struct Position
 {
