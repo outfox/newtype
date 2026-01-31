@@ -5,18 +5,17 @@ A source generator that creates distinct type aliases with full operator forward
 ## Usage
 
 ```csharp
-using System.Numerics;
 using newtype;
 
-[newtype<Vector3>]
+[newtype<System.Numerics.Vector3>]
 public readonly partial struct Position;
 
-[newtype<Vector3>]
+[newtype<System.Numerics.Vector3>]
 public readonly partial struct Velocity;
 
 // Now Position and Velocity are distinct types that behave like Vector3
-var p = new Position(new Vector3(1, 2, 3));
-var v = new Velocity(new Vector3(0.1f, 0, 0));
+var p = new Position(new System.Numerics.Vector3(1, 2, 3));
+var v = new Velocity(new System.Numerics.Vector3(0.1f, 0, 0));
 
 // Static members are forwarded
 Console.WriteLine(Position.UnitX);  // (1, 0, 0)
@@ -30,8 +29,8 @@ Console.WriteLine(p.Length()); // 3.74...
 Position updated = p + v * deltaTime;
 
 // Implicit conversion both ways
-Vector3 vec = p;             // Position → Vector3
-Position pos = new Vector3(); // Vector3 → Position
+Vector3 vec = p;                              // Position → Vector3
+Position pos = new System.Numerics.Vector3(); // Vector3 → Position
 ```
 
 ## What Gets Generated
@@ -104,17 +103,9 @@ The `readonly struct` with `[MethodImpl(MethodImplOptions.AggressiveInlining)]` 
 
 ## Installation
 
-Add the generator project as an analyzer reference:
-
-```xml
-<ItemGroup>
-  <ProjectReference Include="path/to/newtype.Generator.csproj"
-                    OutputItemType="Analyzer" 
-                    ReferenceOutputAssembly="false" />
-</ItemGroup>
+```bash
+dotnet add package newtype
 ```
-
-Or package it as a NuGet package and reference it.
 
 ## Viewing Generated Code
 
