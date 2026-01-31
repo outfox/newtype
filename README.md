@@ -6,10 +6,18 @@ A source generator that creates distinct type aliases with full operator forward
   <img src="logo.svg" alt="logo, a stylized N with a red and Blue half" width="30%">
 </p>
 
-## Usage
-Typical example is different quantities that are backed by the same data type - for instance, forces, velocities, and positions can all be expressed as a Vector3, but are really quite different beasts underneath. 
+`newtype` works for a healthy number of types - many primitives, structs, records, classes work out of the box.
 
-Design patterns such as [Entity-Component Systems](https://github.com/outfox/fennecs) benefit greatly from sleek type forwarding that goes beyond the primitive, identifier aliasing or record-wrapping that C# brings out of the box.
+
+## Installation
+
+> `dotnet add package newtype`
+
+## Usage
+- Basic: strongly typed `string`-names, `int`-IDs, and `int`-counts
+- Typical: quantities backed by the same data type. For example, forces, velocities, positions, etc. all lose their semantics when expressed as `Vector3`
+
+
 ```cs
 using newtype;
 
@@ -38,6 +46,8 @@ Position updated = p + v * deltaTime;
 Vector3 vec = p;                              // Position → Vector3
 Position pos = new System.Numerics.Vector3(); // Vector3 → Position
 ```
+
+Design patterns such as [Entity-Component Systems](https://github.com/outfox/fennecs) benefit greatly from sleek type forwarding that goes beyond the primitive, identifier aliasing or record-wrapping that C# brings out of the box.
 
 ## What Gets Generated
 
@@ -138,6 +148,8 @@ MIT - do whatever you want with it.
 
 ## Extending
 
+You can extend your partial class with needed additional methods and conversions as needed.
+
 ### Adding Custom Cross-Type Operations
 
 If you want `Position + Velocity → Position` without going through `Vector3`, you can add partial methods:
@@ -154,7 +166,9 @@ public readonly partial struct Position
 
 ### Validation
 
-Add a `Validate` partial method pattern if you want runtime validation:
+A simple `Validate` partial method pattern if you want runtime validation. 
+
+(note: would need generator modification to call this from constructor, but one might consider a factory method)
 
 ```cs
 [newtype<Vector3>]
@@ -167,8 +181,6 @@ public readonly partial struct Position
     }
 }
 ```
-
-(Would need generator modification to call this from constructor)
 
 ## Known Limitations
 
