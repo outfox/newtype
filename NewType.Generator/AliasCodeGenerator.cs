@@ -179,6 +179,7 @@ internal class AliasCodeGenerator
     {
         var indent = GetMemberIndent();
         var operators = GetBinaryOperators(_alias.AliasedType);
+        var emittedOps = new HashSet<string>();
 
         foreach (var op in operators)
         {
@@ -187,6 +188,8 @@ internal class AliasCodeGenerator
 
             // Skip equality/inequality - handled by AppendEqualityMembers
             if (op.Name == "op_Equality" || op.Name == "op_Inequality") continue;
+
+            emittedOps.Add(op.Name);
 
             // Get parameter types
             var leftType = op.Parameters[0].Type;
@@ -238,17 +241,56 @@ internal class AliasCodeGenerator
                 _sb.AppendLine();
             }
         }
+
+        // Emit built-in operators for primitive types not discovered via UserDefinedOperator
+        var builtInOps = GetBuiltInBinaryOperatorNames(_alias.AliasedType.SpecialType);
+        foreach (var opName in builtInOps)
+        {
+            if (emittedOps.Contains(opName)) continue;
+            if (opName == "op_Equality" || opName == "op_Inequality") continue;
+
+            var opSymbol = GetOperatorSymbol(opName);
+            if (opSymbol == null) continue;
+
+            if (IsShiftOperator(opName))
+            {
+                // Shift operators: left is the type, right is always int
+                _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
+                _sb.AppendLine($"{indent}public static {_structName} operator {opSymbol}({_structName} left, int right) => left._value {opSymbol} right;");
+                _sb.AppendLine();
+            }
+            else
+            {
+                // Alias op Alias
+                _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
+                _sb.AppendLine($"{indent}public static {_structName} operator {opSymbol}({_structName} left, {_structName} right) => left._value {opSymbol} right._value;");
+                _sb.AppendLine();
+
+                // Alias op T
+                _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
+                _sb.AppendLine($"{indent}public static {_structName} operator {opSymbol}({_structName} left, {_aliasedTypeFullName} right) => left._value {opSymbol} right;");
+                _sb.AppendLine();
+
+                // T op Alias
+                _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
+                _sb.AppendLine($"{indent}public static {_structName} operator {opSymbol}({_aliasedTypeFullName} left, {_structName} right) => left {opSymbol} right._value;");
+                _sb.AppendLine();
+            }
+        }
     }
 
     private void AppendUnaryOperators()
     {
         var indent = GetMemberIndent();
         var operators = GetUnaryOperators(_alias.AliasedType);
+        var emittedOps = new HashSet<string>();
 
         foreach (var op in operators)
         {
             var opSymbol = GetOperatorSymbol(op.Name);
             if (opSymbol == null) continue;
+
+            emittedOps.Add(op.Name);
 
             var returnType = op.ReturnType;
             var returnTypeStr = SymbolEqualityComparer.Default.Equals(returnType, _alias.AliasedType)
@@ -257,6 +299,20 @@ internal class AliasCodeGenerator
 
             _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
             _sb.AppendLine($"{indent}public static {returnTypeStr} operator {opSymbol}({_structName} value) => {opSymbol}value._value;");
+            _sb.AppendLine();
+        }
+
+        // Emit built-in unary operators for primitive types
+        var builtInOps = GetBuiltInUnaryOperatorNames(_alias.AliasedType.SpecialType);
+        foreach (var opName in builtInOps)
+        {
+            if (emittedOps.Contains(opName)) continue;
+
+            var opSymbol = GetOperatorSymbol(opName);
+            if (opSymbol == null) continue;
+
+            _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
+            _sb.AppendLine($"{indent}public static {_structName} operator {opSymbol}({_structName} value) => {opSymbol}value._value;");
             _sb.AppendLine();
         }
     }
@@ -461,15 +517,19 @@ internal class AliasCodeGenerator
         // Generate method forwarders
         foreach (var method in instanceMethods)
         {
+            var isPrimitiveAlias = _alias.AliasedType.SpecialType != SpecialType.None;
             var returnTypeStr = method.ReturnsVoid
                 ? "void"
-                : SymbolEqualityComparer.Default.Equals(method.ReturnType, _alias.AliasedType)
+                : (SymbolEqualityComparer.Default.Equals(method.ReturnType, _alias.AliasedType) && !isPrimitiveAlias)
                     ? _structName
                     : method.ReturnType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
 
             var parameters = string.Join(", ", method.Parameters.Select(p =>
             {
-                var paramType = SymbolEqualityComparer.Default.Equals(p.Type, _alias.AliasedType)
+                var isAliasedType = SymbolEqualityComparer.Default.Equals(p.Type, _alias.AliasedType);
+                // out parameters of the aliased type must keep the underlying type
+                // to avoid CS0192 (cannot pass readonly field as ref/out)
+                var paramType = (isAliasedType && p.RefKind != RefKind.Out)
                     ? _structName
                     : p.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
                 var refKind = p.RefKind switch
@@ -491,12 +551,13 @@ internal class AliasCodeGenerator
                     RefKind.In => "in ",
                     _ => ""
                 };
-                var needsConversion = SymbolEqualityComparer.Default.Equals(p.Type, _alias.AliasedType);
-                var arg = needsConversion ? $"{p.Name}._value" : p.Name;
+                var isAliasedType = SymbolEqualityComparer.Default.Equals(p.Type, _alias.AliasedType);
+                // out parameters of the aliased type are passed directly (no ._value conversion)
+                var arg = (isAliasedType && p.RefKind != RefKind.Out) ? $"{p.Name}._value" : p.Name;
                 return $"{refKind}{arg}";
             }));
 
-            var needsReturnConversion = !method.ReturnsVoid && 
+            var needsReturnConversion = !method.ReturnsVoid && !isPrimitiveAlias &&
                 SymbolEqualityComparer.Default.Equals(method.ReturnType, _alias.AliasedType);
             var returnExpr = method.ReturnsVoid
                 ? $"_value.{method.Name}({arguments})"
@@ -594,6 +655,74 @@ internal class AliasCodeGenerator
             "op_Inequality" => "!=",
             _ => null
         };
+    }
+
+    /// <summary>
+    /// Returns the built-in binary operator metadata names for a primitive SpecialType.
+    /// Primitives use compiler-intrinsic operators not visible as UserDefinedOperator members.
+    /// </summary>
+    private static IReadOnlyList<string> GetBuiltInBinaryOperatorNames(SpecialType specialType)
+    {
+        switch (specialType)
+        {
+            case SpecialType.System_Int32:
+            case SpecialType.System_Int64:
+            case SpecialType.System_Int16:
+            case SpecialType.System_Byte:
+            case SpecialType.System_SByte:
+            case SpecialType.System_UInt16:
+            case SpecialType.System_UInt32:
+            case SpecialType.System_UInt64:
+                return new[]
+                {
+                    "op_Addition", "op_Subtraction", "op_Multiply", "op_Division", "op_Modulus",
+                    "op_BitwiseAnd", "op_BitwiseOr", "op_ExclusiveOr", "op_LeftShift", "op_RightShift"
+                };
+            case SpecialType.System_Single:
+            case SpecialType.System_Double:
+            case SpecialType.System_Decimal:
+                return new[] { "op_Addition", "op_Subtraction", "op_Multiply", "op_Division", "op_Modulus" };
+            case SpecialType.System_Boolean:
+                return new[] { "op_BitwiseAnd", "op_BitwiseOr", "op_ExclusiveOr" };
+            default:
+                return Array.Empty<string>();
+        }
+    }
+
+    /// <summary>
+    /// Returns the built-in unary operator metadata names for a primitive SpecialType.
+    /// </summary>
+    private static IReadOnlyList<string> GetBuiltInUnaryOperatorNames(SpecialType specialType)
+    {
+        switch (specialType)
+        {
+            case SpecialType.System_Int32:
+            case SpecialType.System_Int64:
+            case SpecialType.System_Int16:
+            case SpecialType.System_SByte:
+                return new[] { "op_UnaryNegation", "op_UnaryPlus", "op_OnesComplement" };
+            case SpecialType.System_Byte:
+            case SpecialType.System_UInt16:
+            case SpecialType.System_UInt32:
+            case SpecialType.System_UInt64:
+                return new[] { "op_UnaryPlus", "op_OnesComplement" };
+            case SpecialType.System_Single:
+            case SpecialType.System_Double:
+            case SpecialType.System_Decimal:
+                return new[] { "op_UnaryNegation", "op_UnaryPlus" };
+            case SpecialType.System_Boolean:
+                return new[] { "op_LogicalNot" };
+            default:
+                return Array.Empty<string>();
+        }
+    }
+
+    /// <summary>
+    /// Returns true if the given operator name is a shift operator (where the right operand is always int).
+    /// </summary>
+    private static bool IsShiftOperator(string opName)
+    {
+        return opName == "op_LeftShift" || opName == "op_RightShift";
     }
 
     private bool ImplementsInterface(ITypeSymbol type, string interfaceFullName)
