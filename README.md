@@ -1,4 +1,4 @@
-# TypeAlias - Distinct Type Aliases for C#
+# NewType - Distinct Type Aliases for C#
 
 A source generator that creates distinct type aliases with full operator forwarding. Inspired by Haskell's `newtype` and F#'s type abbreviations.
 
@@ -6,7 +6,7 @@ A source generator that creates distinct type aliases with full operator forward
 
 ```csharp
 using System.Numerics;
-using TypeAlias;
+using newtype;
 
 [newtype<Vector3>]
 public readonly partial struct Position;
@@ -108,7 +108,7 @@ Add the generator project as an analyzer reference:
 
 ```xml
 <ItemGroup>
-  <ProjectReference Include="path/to/TypeAlias.Generator.csproj" 
+  <ProjectReference Include="path/to/newtype.Generator.csproj"
                     OutputItemType="Analyzer" 
                     ReferenceOutputAssembly="false" />
 </ItemGroup>
