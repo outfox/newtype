@@ -20,7 +20,7 @@
     <RepositoryUrl>https://github.com/outfox/newtype</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageIconUrl>https://github.com/outfox/newtype/icon.png</PackageIconUrl>
+    <PackageIcon>icon.png</PackageIcon>
 
     <!-- Important: Include the generator as an analyzer -->
     <IncludeBuildOutput>false</IncludeBuildOutput>
