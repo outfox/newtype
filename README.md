@@ -2,6 +2,9 @@
 
 A source generator that creates distinct type aliases with full operator forwarding. Inspired by Haskell's `newtype` and F#'s type abbreviations.
 
+<p align="center">
+  <img src="logo.svg" alt="newtype logo, a stylized N with a red and Blue half" width="50%">
+</p>
 
 ![Newtype Logo](logo.svg)
 
