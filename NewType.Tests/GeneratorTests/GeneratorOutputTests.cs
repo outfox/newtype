@@ -1,4 +1,3 @@
-using Basic.Reference.Assemblies;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using newtype.generator;
@@ -114,7 +113,7 @@ public class GeneratorOutputTests
         var compilation = CSharpCompilation.Create(
             "Tests",
             [syntaxTree],
-            Net100.References.All,
+            GeneratorTestHelper.TargetReferences,
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
 
         var generator = new AliasGenerator().AsSourceGenerator();

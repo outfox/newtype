@@ -8,6 +8,15 @@ namespace newtype.tests;
 
 internal static class GeneratorTestHelper
 {
+    internal static IEnumerable<MetadataReference> TargetReferences =>
+#if NET10_0_OR_GREATER
+        Net100.References.All;
+#elif NET9_0_OR_GREATER
+        Net90.References.All;
+#else
+        Net80.References.All;
+#endif
+
     public static GeneratorDriverRunResult RunGenerator(string source)
     {
         var syntaxTree = CSharpSyntaxTree.ParseText(source, new CSharpParseOptions(LanguageVersion.Preview));
@@ -15,7 +24,7 @@ internal static class GeneratorTestHelper
         var compilation = CSharpCompilation.Create(
             "Tests",
             [syntaxTree],
-            Net100.References.All,
+            TargetReferences,
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
 
         var generator = new AliasGenerator().AsSourceGenerator();
@@ -48,7 +57,7 @@ internal static class GeneratorTestHelper
         var compilation = CSharpCompilation.Create(
             "Tests",
             [syntaxTree],
-            Net100.References.All,
+            TargetReferences,
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
 
         var generator = new AliasGenerator().AsSourceGenerator();
