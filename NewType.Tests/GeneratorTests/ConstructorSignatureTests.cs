@@ -21,12 +21,13 @@ public class ConstructorSignatureTests
             public readonly partial struct ParserAlias;
             """;
 
-        // Should compile without errors — both constructors should be forwarded
+        // Both constructors should be forwarded
         var result = GeneratorTestHelper.RunGenerator(source);
         var text = result.Results[0].GeneratedSources
             .Single(s => s.HintName.EndsWith("ParserAlias.g.cs"))
             .SourceText.ToString();
 
         Assert.Contains("public ParserAlias(string input)", text);
+        Assert.Contains("public ParserAlias(ref string input)", text);
     }
 }

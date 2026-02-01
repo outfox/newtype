@@ -1,3 +1,4 @@
+using System.Globalization;
 using Xunit;
 
 namespace newtype.tests;
@@ -20,13 +21,25 @@ public class DefaultValueFormattingTests
             public readonly partial struct Price;
             """;
 
-        var result = GeneratorTestHelper.RunGenerator(source);
-        var text = result.Results[0].GeneratedSources
-            .Single(s => s.HintName.EndsWith("Price.g.cs"))
-            .SourceText.ToString();
+        // Run under de-DE where the decimal separator is a comma
+        var previous = CultureInfo.CurrentCulture;
+        try
+        {
+            CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("de-DE");
 
-        // The forwarded constructor must use a period, not a locale-dependent separator
-        Assert.Contains("1.5m", text);
+            var result = GeneratorTestHelper.RunGenerator(source);
+            var text = result.Results[0].GeneratedSources
+                .Single(s => s.HintName.EndsWith("Price.g.cs"))
+                .SourceText.ToString();
+
+            // Must use period even under de-DE culture
+            Assert.Contains("1.5m", text);
+            Assert.DoesNotContain("1,5m", text);
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = previous;
+        }
     }
 
     [Fact]
