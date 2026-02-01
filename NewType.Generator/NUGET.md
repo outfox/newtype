@@ -17,28 +17,30 @@ dotnet add package newtype
 using newtype;
 
 [newtype<string>]
-public readonly partial struct TableId;
+public readonly partial struct UserId;
 
 [newtype<int>]
-public readonly partial struct PizzasEaten;
+public readonly partial struct LoginAttempts;
 
 [newtype<double>]
-public readonly partial struct Fullness;
+public readonly partial struct Balance;
 
-class Guest
+class Account
 {
-    TableId table = "Table 1";
-    PizzasEaten pizzasEaten;
-    Fullness fullness;
-    
-    public void fillEmUp(Fullness threshold)
+    UserId id = "usr_8x2k";
+    LoginAttempts failedLogins;
+    Balance balance = 50.0;
+
+    public void Deposit(Balance amount) => balance += amount;
+
+    public void FailedLogin(LoginAttempts maxAttempts)
     {
-        while (fullness < threshold)
-        {
-            pizzasEaten++;
-            fullness += 0.1;
-        }
+        failedLogins++;
+        if (failedLogins >= maxAttempts)
+            Lock();
     }
+
+    void Lock() { /* ... */ }
 }
 ```
 
@@ -176,9 +178,8 @@ Then check `obj/GeneratedFiles/` after building.
 
 ## Requirements
 
-- .NET 7+ SDK (for building the generator)
+- .NET 10+ SDK
 - C# 11+ (for generic attributes `[newtype<T>]`)
-- Target framework can be anything supported by your SDK
 
 ## License
 
