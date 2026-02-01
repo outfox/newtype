@@ -33,6 +33,13 @@ public readonly partial struct Velocity;
 // Rich string aliases — all string operations forwarded
 [newtype<string>]
 public readonly partial struct Email;
+
+// Also works with records, classes, and record classes
+[newtype<double>]
+public partial record struct Duration;  // gets compiler-synthesized equality
+
+[newtype<string>]
+public partial class DisplayName;       // reference-type wrapper with null safety
 ```
 
 Everything works as you'd expect:
@@ -55,7 +62,7 @@ Move(velocity, position);                  // compile error — type safety!
 
 ## What Gets Generated
 
-For each `[newtype<T>]` partial struct, the generator emits:
+For each `[newtype<T>]` partial type, the generator emits:
 
 | Category | What |
 |---|---|
@@ -105,7 +112,7 @@ With any option, the primary constructor (`new Alias(T value)`) and `.Value` pro
 
 ## Extending Your Types
 
-Since the alias is a `partial struct`, you can add custom members:
+Since the alias is a `partial` type, you can add custom members:
 
 ```csharp
 [newtype<Vector3>]

@@ -83,3 +83,26 @@ public readonly partial struct OpaqueId;
 
 [newtype<int>(MethodImpl = default)]
 public readonly partial struct RelaxedEntityId;
+
+// documentation example types
+[newtype<int>]
+public readonly partial struct PlayerId;
+
+[newtype<string>]
+public readonly partial struct Email;
+
+[newtype<string>]
+public partial class DisplayName;
+
+[newtype<Vector3>(Options = NewtypeOptions.Opaque)]
+public readonly partial struct StrictPosition;
+
+[newtype<int>(MethodImpl = default)]
+public readonly partial struct RelaxedId;
+
+// "Extending Your Types" example — custom cross-type operator
+public readonly partial struct Position
+{
+    public static Position operator +(Position p, Velocity v)
+        => new(p.Value + v.Value);
+}
