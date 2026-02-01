@@ -36,6 +36,12 @@ internal readonly record struct AliasModel(
     // (used to emit the #region even when no property/readonly-field members survive filtering)
     bool HasStaticMemberCandidates,
 
+    // Constraint parameters from [newtype] attribute
+    bool SuppressImplicitWrap,
+    bool SuppressImplicitUnwrap,
+    bool SuppressConstructorForwarding,
+    int MethodImplValue,
+
     // Members
     EquatableArray<BinaryOperatorInfo> BinaryOperators,
     EquatableArray<UnaryOperatorInfo> UnaryOperators,

@@ -12,7 +12,16 @@ namespace newtype.generator;
 /// </summary>
 internal static class AliasModelExtractor
 {
-    public static AliasModel? Extract(GeneratorAttributeSyntaxContext context, ITypeSymbol aliasedType)
+    // Mirror of the injected NewtypeOptions flags — the generator can't reference the enum directly.
+    private const int OptionsNoImplicitWrap = 1;
+    private const int OptionsNoImplicitUnwrap = 2;
+    private const int OptionsNoConstructorForwarding = 4;
+
+    public static AliasModel? Extract(
+        GeneratorAttributeSyntaxContext context,
+        ITypeSymbol aliasedType,
+        int options,
+        int methodImpl)
     {
         var typeDecl = (TypeDeclarationSyntax)context.TargetNode;
         var typeSymbol = (INamedTypeSymbol)context.TargetSymbol;
@@ -64,6 +73,10 @@ internal static class AliasModelExtractor
             HasNativeEqualityOperator: hasNativeEquality,
             TypeDisplayString: typeDisplayString,
             HasStaticMemberCandidates: hasStaticMemberCandidates,
+            SuppressImplicitWrap: (options & OptionsNoImplicitWrap) != 0,
+            SuppressImplicitUnwrap: (options & OptionsNoImplicitUnwrap) != 0,
+            SuppressConstructorForwarding: (options & OptionsNoConstructorForwarding) != 0,
+            MethodImplValue: methodImpl,
             BinaryOperators: binaryOperators,
             UnaryOperators: unaryOperators,
             StaticMembers: staticMembers,

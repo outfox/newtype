@@ -8,6 +8,13 @@ namespace newtype.generator;
 /// </summary>
 internal class AliasCodeGenerator
 {
+    // Mirror of System.Runtime.CompilerServices.MethodImplOptions values.
+    private const int MethodImplNone = 0;
+    private const int MethodImplAggressiveInlining = 256;
+    private const int MethodImplNoInlining = 8;
+    private const int MethodImplNoOptimization = 64;
+    private const int MethodImplAggressiveOptimization = 512;
+
     private readonly AliasModel _model;
     private readonly StringBuilder _sb = new();
 
@@ -132,16 +139,19 @@ internal class AliasCodeGenerator
     {
         var indent = GetMemberIndent();
 
-        // Constructor from aliased type
+        // Constructor from aliased type (always emitted)
         _sb.AppendLine($"{indent}/// <summary>Creates a new {_model.TypeName} from a {_model.AliasedTypeMinimalName}.</summary>");
-        _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
+        AppendMethodImplAttribute(indent);
         _sb.AppendLine($"{indent}public {_model.TypeName}({_model.AliasedTypeFullName} value) => _value = value;");
         _sb.AppendLine();
 
-        // Forward constructors from the aliased type
-        foreach (var ctor in _model.ForwardedConstructors)
+        // Forward constructors from the aliased type (conditionally)
+        if (!_model.SuppressConstructorForwarding)
         {
-            AppendForwardedConstructor(indent, ctor);
+            foreach (var ctor in _model.ForwardedConstructors)
+            {
+                AppendForwardedConstructor(indent, ctor);
+            }
         }
     }
 
@@ -151,7 +161,7 @@ internal class AliasCodeGenerator
         _sb.AppendLine($"{indent}/// <summary>Gets the underlying value.</summary>");
         _sb.AppendLine($"{indent}public {_model.AliasedTypeFullName} Value");
         _sb.AppendLine($"{indent}{{");
-        _sb.AppendLine($"{indent}    [MethodImpl(MethodImplOptions.AggressiveInlining)]");
+        AppendMethodImplAttribute($"{indent}    ");
         _sb.AppendLine($"{indent}    get => _value;");
         _sb.AppendLine($"{indent}}}");
         _sb.AppendLine();
@@ -161,17 +171,23 @@ internal class AliasCodeGenerator
     {
         var indent = GetMemberIndent();
 
-        // Implicit from aliased type to alias
-        _sb.AppendLine($"{indent}/// <summary>Implicitly converts from {_model.AliasedTypeMinimalName} to {_model.TypeName}.</summary>");
-        _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
-        _sb.AppendLine($"{indent}public static implicit operator {_model.TypeName}({_model.AliasedTypeFullName} value) => new {_model.TypeName}(value);");
-        _sb.AppendLine();
+        // Implicit from aliased type to alias (T → Alias)
+        if (!_model.SuppressImplicitWrap)
+        {
+            _sb.AppendLine($"{indent}/// <summary>Implicitly converts from {_model.AliasedTypeMinimalName} to {_model.TypeName}.</summary>");
+            AppendMethodImplAttribute(indent);
+            _sb.AppendLine($"{indent}public static implicit operator {_model.TypeName}({_model.AliasedTypeFullName} value) => new {_model.TypeName}(value);");
+            _sb.AppendLine();
+        }
 
-        // Implicit from alias to aliased type
-        _sb.AppendLine($"{indent}/// <summary>Implicitly converts from {_model.TypeName} to {_model.AliasedTypeMinimalName}.</summary>");
-        _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
-        _sb.AppendLine($"{indent}public static implicit operator {_model.AliasedTypeFullName}({_model.TypeName} value) => value._value;");
-        _sb.AppendLine();
+        // Implicit from alias to aliased type (Alias → T)
+        if (!_model.SuppressImplicitUnwrap)
+        {
+            _sb.AppendLine($"{indent}/// <summary>Implicitly converts from {_model.TypeName} to {_model.AliasedTypeMinimalName}.</summary>");
+            AppendMethodImplAttribute(indent);
+            _sb.AppendLine($"{indent}public static implicit operator {_model.AliasedTypeFullName}({_model.TypeName} value) => value._value;");
+            _sb.AppendLine();
+        }
     }
 
     private void AppendBinaryOperators()
@@ -196,8 +212,9 @@ internal class AliasCodeGenerator
                     ? _model.TypeName
                     : op.ReturnTypeFullName;
 
-                _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
-                _sb.AppendLine($"{indent}public static {returnTypeStr} operator {opSymbol}({_model.TypeName} left, {_model.TypeName} right) => left._value {opSymbol} right._value;");
+                var expr1 = WrapIfAlias(op.ReturnIsAliasedType, $"left._value {opSymbol} right._value");
+                AppendMethodImplAttribute(indent);
+                _sb.AppendLine($"{indent}public static {returnTypeStr} operator {opSymbol}({_model.TypeName} left, {_model.TypeName} right) => {expr1};");
                 _sb.AppendLine();
 
                 // Also generate alias op T for cross-type interop
@@ -205,8 +222,9 @@ internal class AliasCodeGenerator
                 // the same underlying type T, emitting both directions creates ambiguous overloads
                 // (e.g. Position + Velocity would match both Vector3+Position and Velocity+Vector3).
                 // The implicit conversion to T already covers the T op alias case.
-                _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
-                _sb.AppendLine($"{indent}public static {returnTypeStr} operator {opSymbol}({_model.TypeName} left, {_model.AliasedTypeFullName} right) => left._value {opSymbol} right;");
+                var expr2 = WrapIfAlias(op.ReturnIsAliasedType, $"left._value {opSymbol} right");
+                AppendMethodImplAttribute(indent);
+                _sb.AppendLine($"{indent}public static {returnTypeStr} operator {opSymbol}({_model.TypeName} left, {_model.AliasedTypeFullName} right) => {expr2};");
                 _sb.AppendLine();
             }
             // Operator with aliased type on left only — also emit T op Alias
@@ -216,8 +234,9 @@ internal class AliasCodeGenerator
                     ? _model.TypeName
                     : op.ReturnTypeFullName;
 
-                _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
-                _sb.AppendLine($"{indent}public static {returnTypeStr} operator {opSymbol}({_model.TypeName} left, {op.RightTypeFullName} right) => left._value {opSymbol} right;");
+                var expr = WrapIfAlias(op.ReturnIsAliasedType, $"left._value {opSymbol} right");
+                AppendMethodImplAttribute(indent);
+                _sb.AppendLine($"{indent}public static {returnTypeStr} operator {opSymbol}({_model.TypeName} left, {op.RightTypeFullName} right) => {expr};");
                 _sb.AppendLine();
             }
             // Operator with aliased type on right only — also emit Alias op T
@@ -227,8 +246,9 @@ internal class AliasCodeGenerator
                     ? _model.TypeName
                     : op.ReturnTypeFullName;
 
-                _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
-                _sb.AppendLine($"{indent}public static {returnTypeStr} operator {opSymbol}({op.LeftTypeFullName} left, {_model.TypeName} right) => left {opSymbol} right._value;");
+                var expr = WrapIfAlias(op.ReturnIsAliasedType, $"left {opSymbol} right._value");
+                AppendMethodImplAttribute(indent);
+                _sb.AppendLine($"{indent}public static {returnTypeStr} operator {opSymbol}({op.LeftTypeFullName} left, {_model.TypeName} right) => {expr};");
                 _sb.AppendLine();
             }
         }
@@ -245,25 +265,25 @@ internal class AliasCodeGenerator
 
             if (IsShiftOperator(opName))
             {
-                _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
-                _sb.AppendLine($"{indent}public static {_model.TypeName} operator {opSymbol}({_model.TypeName} left, int right) => left._value {opSymbol} right;");
+                AppendMethodImplAttribute(indent);
+                _sb.AppendLine($"{indent}public static {_model.TypeName} operator {opSymbol}({_model.TypeName} left, int right) => new {_model.TypeName}(left._value {opSymbol} right);");
                 _sb.AppendLine();
             }
             else
             {
                 // Alias op Alias
-                _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
-                _sb.AppendLine($"{indent}public static {_model.TypeName} operator {opSymbol}({_model.TypeName} left, {_model.TypeName} right) => left._value {opSymbol} right._value;");
+                AppendMethodImplAttribute(indent);
+                _sb.AppendLine($"{indent}public static {_model.TypeName} operator {opSymbol}({_model.TypeName} left, {_model.TypeName} right) => new {_model.TypeName}(left._value {opSymbol} right._value);");
                 _sb.AppendLine();
 
                 // Alias op T
-                _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
-                _sb.AppendLine($"{indent}public static {_model.TypeName} operator {opSymbol}({_model.TypeName} left, {_model.AliasedTypeFullName} right) => left._value {opSymbol} right;");
+                AppendMethodImplAttribute(indent);
+                _sb.AppendLine($"{indent}public static {_model.TypeName} operator {opSymbol}({_model.TypeName} left, {_model.AliasedTypeFullName} right) => new {_model.TypeName}(left._value {opSymbol} right);");
                 _sb.AppendLine();
 
                 // T op Alias
-                _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
-                _sb.AppendLine($"{indent}public static {_model.TypeName} operator {opSymbol}({_model.AliasedTypeFullName} left, {_model.TypeName} right) => left {opSymbol} right._value;");
+                AppendMethodImplAttribute(indent);
+                _sb.AppendLine($"{indent}public static {_model.TypeName} operator {opSymbol}({_model.AliasedTypeFullName} left, {_model.TypeName} right) => new {_model.TypeName}(left {opSymbol} right._value);");
                 _sb.AppendLine();
             }
         }
@@ -285,8 +305,9 @@ internal class AliasCodeGenerator
                 ? _model.TypeName
                 : op.ReturnTypeFullName;
 
-            _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
-            _sb.AppendLine($"{indent}public static {returnTypeStr} operator {opSymbol}({_model.TypeName} value) => {opSymbol}value._value;");
+            var expr = WrapIfAlias(op.ReturnIsAliasedType, $"{opSymbol}value._value");
+            AppendMethodImplAttribute(indent);
+            _sb.AppendLine($"{indent}public static {returnTypeStr} operator {opSymbol}({_model.TypeName} value) => {expr};");
             _sb.AppendLine();
         }
 
@@ -299,10 +320,21 @@ internal class AliasCodeGenerator
             var opSymbol = GetOperatorSymbol(opName);
             if (opSymbol == null) continue;
 
-            _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
-            _sb.AppendLine($"{indent}public static {_model.TypeName} operator {opSymbol}({_model.TypeName} value) => {opSymbol}value._value;");
+            AppendMethodImplAttribute(indent);
+            _sb.AppendLine($"{indent}public static {_model.TypeName} operator {opSymbol}({_model.TypeName} value) => new {_model.TypeName}({opSymbol}value._value);");
             _sb.AppendLine();
         }
+    }
+
+    /// <summary>
+    /// Wraps an expression in <c>new TypeName(...)</c> when the return type is the alias type,
+    /// so generated operators don't depend on the implicit wrap conversion being present.
+    /// </summary>
+    private string WrapIfAlias(bool returnIsAliasedType, string expr)
+    {
+        return returnIsAliasedType
+            ? $"new {_model.TypeName}({expr})"
+            : expr;
     }
 
     private void AppendComparisonOperators()
@@ -332,7 +364,7 @@ internal class AliasCodeGenerator
             string[] ops = ["<", ">", "<=", ">="];
             foreach (var op in ops)
             {
-                _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
+                AppendMethodImplAttribute(indent);
                 _sb.AppendLine($"{indent}public static bool operator {op}({_model.TypeName} left, {_model.TypeName} right) => left._value {op} right._value;");
                 _sb.AppendLine();
             }
@@ -352,7 +384,7 @@ internal class AliasCodeGenerator
             string[] ops = ["<", ">", "<=", ">="];
             foreach (var op in ops)
             {
-                _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
+                AppendMethodImplAttribute(indent);
                 _sb.AppendLine($"{indent}public static bool operator {op}({_model.TypeName} left, {_model.TypeName} right) => {CompareExpr(op)};");
                 _sb.AppendLine();
             }
@@ -379,7 +411,7 @@ internal class AliasCodeGenerator
                     ? "object.Equals(_value, other._value)"
                     : "_value.Equals(other._value)";
             _sb.AppendLine($"{indent}/// <inheritdoc/>");
-            _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
+            AppendMethodImplAttribute(indent);
             _sb.AppendLine($"{indent}public bool Equals({_model.TypeName}{nullableParam} other) => {equalsExpr};");
             _sb.AppendLine();
 
@@ -391,32 +423,32 @@ internal class AliasCodeGenerator
             if (_model.IsClass)
             {
                 // Class types need null-safe equality operators
-                _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
+                AppendMethodImplAttribute(indent);
                 _sb.AppendLine($"{indent}public static bool operator ==({_model.TypeName}? left, {_model.TypeName}? right) => ReferenceEquals(left, right) || (left is not null && left.Equals(right));");
                 _sb.AppendLine();
 
-                _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
+                AppendMethodImplAttribute(indent);
                 _sb.AppendLine($"{indent}public static bool operator !=({_model.TypeName}? left, {_model.TypeName}? right) => !(left == right);");
                 _sb.AppendLine();
             }
             else if (_model.HasNativeEqualityOperator)
             {
-                _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
+                AppendMethodImplAttribute(indent);
                 _sb.AppendLine($"{indent}public static bool operator ==({_model.TypeName} left, {_model.TypeName} right) => left._value == right._value;");
                 _sb.AppendLine();
 
-                _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
+                AppendMethodImplAttribute(indent);
                 _sb.AppendLine($"{indent}public static bool operator !=({_model.TypeName} left, {_model.TypeName} right) => left._value != right._value;");
                 _sb.AppendLine();
             }
             else
             {
                 // Fallback: route through Equals
-                _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
+                AppendMethodImplAttribute(indent);
                 _sb.AppendLine($"{indent}public static bool operator ==({_model.TypeName} left, {_model.TypeName} right) => left.Equals(right);");
                 _sb.AppendLine();
 
-                _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
+                AppendMethodImplAttribute(indent);
                 _sb.AppendLine($"{indent}public static bool operator !=({_model.TypeName} left, {_model.TypeName} right) => !left.Equals(right);");
                 _sb.AppendLine();
             }
@@ -435,7 +467,7 @@ internal class AliasCodeGenerator
                     ? "_value is null ? (other._value is null ? 0 : -1) : _value.CompareTo(other._value)"
                     : "_value.CompareTo(other._value)";
             _sb.AppendLine($"{indent}/// <inheritdoc/>");
-            _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
+            AppendMethodImplAttribute(indent);
             _sb.AppendLine($"{indent}public int CompareTo({_model.TypeName}{nullableParam} other) => {compareExpr};");
             _sb.AppendLine();
         }
@@ -465,7 +497,7 @@ internal class AliasCodeGenerator
                 _sb.AppendLine($"{indent}/// <summary>Forwards {_model.AliasedTypeMinimalName}.{member.Name}.</summary>");
                 _sb.AppendLine($"{indent}public static {returnTypeStr} {member.Name}");
                 _sb.AppendLine($"{indent}{{");
-                _sb.AppendLine($"{indent}    [MethodImpl(MethodImplOptions.AggressiveInlining)]");
+                AppendMethodImplAttribute($"{indent}    ");
                 _sb.AppendLine($"{indent}    get => {valueExpr};");
                 _sb.AppendLine($"{indent}}}");
                 _sb.AppendLine();
@@ -506,7 +538,7 @@ internal class AliasCodeGenerator
             _sb.AppendLine($"{indent}/// <summary>Forwards {_model.AliasedTypeMinimalName}.{field.Name}.</summary>");
             _sb.AppendLine($"{indent}public {returnTypeStr} {field.Name}");
             _sb.AppendLine($"{indent}{{");
-            _sb.AppendLine($"{indent}    [MethodImpl(MethodImplOptions.AggressiveInlining)]");
+            AppendMethodImplAttribute($"{indent}    ");
             _sb.AppendLine($"{indent}    get => {valueExpr};");
             _sb.AppendLine($"{indent}}}");
             _sb.AppendLine();
@@ -528,7 +560,7 @@ internal class AliasCodeGenerator
                 var valueExpr = prop.TypeIsAliasedType
                     ? $"new {_model.TypeName}(_value.{prop.Name})"
                     : $"_value.{prop.Name}";
-                _sb.AppendLine($"{indent}    [MethodImpl(MethodImplOptions.AggressiveInlining)]");
+                AppendMethodImplAttribute($"{indent}    ");
                 _sb.AppendLine($"{indent}    get => {valueExpr};");
             }
 
@@ -584,7 +616,7 @@ internal class AliasCodeGenerator
                     : $"_value.{method.Name}({arguments})";
 
             _sb.AppendLine($"{indent}/// <summary>Forwards {_model.AliasedTypeMinimalName}.{method.Name}.</summary>");
-            _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
+            AppendMethodImplAttribute(indent);
 
             _sb.AppendLine(
                 method.ReturnsVoid
@@ -624,7 +656,7 @@ internal class AliasCodeGenerator
 
         var hashExpr = isRefType ? "_value?.GetHashCode() ?? 0" : "_value.GetHashCode()";
         _sb.AppendLine($"{indent}/// <inheritdoc/>");
-        _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
+        AppendMethodImplAttribute(indent);
         _sb.AppendLine($"{indent}public override int GetHashCode() => {hashExpr};");
         _sb.AppendLine();
     }
@@ -635,9 +667,28 @@ internal class AliasCodeGenerator
         var arguments = FormatConstructorArguments(ctor);
 
         _sb.AppendLine($"{indent}/// <summary>Forwards {_model.AliasedTypeMinimalName} constructor.</summary>");
-        _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
+        AppendMethodImplAttribute(indent);
         _sb.AppendLine($"{indent}public {_model.TypeName}({parameters}) => _value = new {_model.AliasedTypeFullName}({arguments});");
         _sb.AppendLine();
+    }
+
+    /// <summary>
+    /// Emits a [MethodImpl(...)] attribute line, or nothing if the user set MethodImpl = default (0).
+    /// </summary>
+    private void AppendMethodImplAttribute(string indent)
+    {
+        var line = _model.MethodImplValue switch
+        {
+            MethodImplNone => null,
+            MethodImplAggressiveInlining => $"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]",
+            MethodImplNoInlining => $"{indent}[MethodImpl(MethodImplOptions.NoInlining)]",
+            MethodImplNoOptimization => $"{indent}[MethodImpl(MethodImplOptions.NoOptimization)]",
+            MethodImplAggressiveOptimization => $"{indent}[MethodImpl(MethodImplOptions.AggressiveOptimization)]",
+            _ => $"{indent}[MethodImpl((MethodImplOptions){_model.MethodImplValue})]",
+        };
+
+        if (line != null)
+            _sb.AppendLine(line);
     }
 
     private static string FormatConstructorParameters(ConstructorInfo ctor)

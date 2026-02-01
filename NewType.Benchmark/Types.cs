@@ -16,3 +16,6 @@ public readonly partial struct Position4;
 
 [newtype<int>]
 public partial record struct Score;
+
+[newtype<int>(MethodImpl = default)]
+public readonly partial struct DefaultImplId;

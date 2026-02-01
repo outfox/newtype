@@ -67,3 +67,19 @@ public partial record RecordTimestamp;
 
 [newtype<Rgb>]
 public partial record RecordTint;
+
+// constraint variants
+[newtype<int>(Options = NewtypeOptions.NoImplicitWrap)]
+public readonly partial struct StrictEntityId;
+
+[newtype<int>(Options = NewtypeOptions.NoImplicitUnwrap)]
+public readonly partial struct GuardedEntityId;
+
+[newtype<Vector3>(Options = NewtypeOptions.NoConstructorForwarding)]
+public readonly partial struct RawPosition;
+
+[newtype<int>(Options = NewtypeOptions.NoImplicitConversions)]
+public readonly partial struct OpaqueId;
+
+[newtype<int>(MethodImpl = default)]
+public readonly partial struct RelaxedEntityId;

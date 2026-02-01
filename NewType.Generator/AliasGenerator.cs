@@ -49,7 +49,8 @@ public class AliasGenerator : IIncrementalGenerator
                 attributeClass.TypeArguments.Length == 1)
             {
                 var aliasedType = attributeClass.TypeArguments[0];
-                return AliasModelExtractor.Extract(context, aliasedType);
+                var (options, methodImpl) = ExtractNamedArguments(attributeData);
+                return AliasModelExtractor.Extract(context, aliasedType, options, methodImpl);
             }
         }
         return null;
@@ -62,10 +63,37 @@ public class AliasGenerator : IIncrementalGenerator
             if (attributeData.ConstructorArguments.Length > 0 &&
                 attributeData.ConstructorArguments[0].Value is ITypeSymbol aliasedType)
             {
-                return AliasModelExtractor.Extract(context, aliasedType);
+                var (options, methodImpl) = ExtractNamedArguments(attributeData);
+                return AliasModelExtractor.Extract(context, aliasedType, options, methodImpl);
             }
         }
         return null;
+    }
+
+    // Mirrors MethodImplOptions.AggressiveInlining — the generator can't reference
+    // the injected NewtypeOptions enum, and we want readable defaults.
+    private const int DefaultOptions = 0;
+    private const int DefaultMethodImplAggressiveInlining = 256;
+
+    private static (int options, int methodImpl) ExtractNamedArguments(AttributeData attributeData)
+    {
+        int options = DefaultOptions;
+        int methodImpl = DefaultMethodImplAggressiveInlining;
+
+        foreach (var arg in attributeData.NamedArguments)
+        {
+            switch (arg.Key)
+            {
+                case "Options":
+                    options = (int)arg.Value.Value!;
+                    break;
+                case "MethodImpl":
+                    methodImpl = (int)arg.Value.Value!;
+                    break;
+            }
+        }
+
+        return (options, methodImpl);
     }
 
     private static void GenerateAliasCode(

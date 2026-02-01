@@ -17,6 +17,26 @@ internal static class NewtypeAttributeSource
                                  namespace newtype
                                  {
                                      /// <summary>
+                                     /// Controls which features the newtype generator emits.
+                                     /// </summary>
+                                     [global::System.Flags]
+                                     internal enum NewtypeOptions
+                                     {
+                                         /// <summary>All features enabled (default).</summary>
+                                         None                    = 0,
+                                         /// <summary>Suppress the implicit conversion from T to the alias.</summary>
+                                         NoImplicitWrap          = 1,
+                                         /// <summary>Suppress the implicit conversion from the alias to T.</summary>
+                                         NoImplicitUnwrap        = 2,
+                                         /// <summary>Suppress forwarding constructors from T.</summary>
+                                         NoConstructorForwarding = 4,
+                                         /// <summary>Suppress both implicit conversions.</summary>
+                                         NoImplicitConversions   = NoImplicitWrap | NoImplicitUnwrap,
+                                         /// <summary>Suppress implicit conversions and constructor forwarding.</summary>
+                                         Opaque                  = NoImplicitConversions | NoConstructorForwarding,
+                                     }
+
+                                     /// <summary>
                                      /// Marks a partial type as a type alias for the specified type.
                                      /// The source generator will generate implicit conversions, operator forwarding,
                                      /// and interface implementations to make this type behave like the aliased type
@@ -31,8 +51,19 @@ internal static class NewtypeAttributeSource
                                          /// Creates a new alias attribute for the specified type.
                                          /// </summary>
                                          public newtypeAttribute() { }
+
+                                         /// <summary>Controls which features the generator emits.</summary>
+                                         public NewtypeOptions Options { get; set; }
+
+                                         /// <summary>
+                                         /// Overrides the MethodImplOptions applied to generated members.
+                                         /// Default is <see cref="global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining"/>.
+                                         /// Set to <c>default</c> (0) to omit the attribute entirely.
+                                         /// </summary>
+                                         public global::System.Runtime.CompilerServices.MethodImplOptions MethodImpl { get; set; }
+                                             = global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining;
                                      }
-                                     
+
                                      /// <summary>
                                      /// Non-generic version for older C# versions or when generic attributes aren't supported.
                                      /// </summary>
@@ -44,7 +75,7 @@ internal static class NewtypeAttributeSource
                                          /// The type being aliased.
                                          /// </summary>
                                          public global::System.Type AliasedType { get; }
-                                         
+
                                          /// <summary>
                                          /// Creates a new alias attribute for the specified type.
                                          /// </summary>
@@ -53,6 +84,17 @@ internal static class NewtypeAttributeSource
                                          {
                                              AliasedType = aliasedType;
                                          }
+
+                                         /// <summary>Controls which features the generator emits.</summary>
+                                         public NewtypeOptions Options { get; set; }
+
+                                         /// <summary>
+                                         /// Overrides the MethodImplOptions applied to generated members.
+                                         /// Default is <see cref="global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining"/>.
+                                         /// Set to <c>default</c> (0) to omit the attribute entirely.
+                                         /// </summary>
+                                         public global::System.Runtime.CompilerServices.MethodImplOptions MethodImpl { get; set; }
+                                             = global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining;
                                      }
                                  }
                                  """;
