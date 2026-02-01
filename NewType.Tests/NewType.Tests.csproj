@@ -17,10 +17,20 @@
         <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.*"/>
         <PackageReference Include="xunit" Version="2.*"/>
         <PackageReference Include="xunit.runner.visualstudio" Version="2.*"/>
+
+        <!-- Roslyn APIs for in-memory compilation in generator tests -->
+        <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.11.0"/>
+
+        <!-- Reference assemblies for in-memory compilation (includes System.Numerics etc.) -->
+        <PackageReference Include="Basic.Reference.Assemblies.Net100" Version="1.8.4"/>
     </ItemGroup>
 
     <ItemGroup>
+        <!-- Analyzer reference: feeds generator to the build-time Roslyn host (powers integration tests) -->
         <ProjectReference Include="..\NewType.Generator\NewType.Generator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false"/>
+
+        <!-- Assembly reference: lets test code instantiate AliasGenerator directly -->
+        <ProjectReference Include="..\NewType.Generator\NewType.Generator.csproj"/>
     </ItemGroup>
 
 </Project>

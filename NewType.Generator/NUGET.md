@@ -1,9 +1,8 @@
-# `newtype` (Distinct Type Aliases for C#)
+# `newtype` *(Distinct Type Aliases for C#)*
 
-![logo, a stylized N with a red and Blue half](https://raw.githubusercontent.com/outfox/newtype/main/logo.svg)
+![logo, a stylized N with a red and blue half](https://raw.githubusercontent.com/outfox/newtype/main/logo.svg)
 
-A source generator that creates distinct type aliases with full operator forwarding. Inspired by Haskell's `newtype` and
-F#'s type abbreviations. `newtype` works for a healthy number of types - many primitives, structs, records, classes work out of the box.
+This package is a source generator that creates distinct type aliases with full operator and constructor forwarding. Inspired by Haskell's `newtype` and F#'s type abbreviations. `newtype` works for a healthy number of types - many primitives, structs, records, classes work out of the box.
 
 ## Installation
 
@@ -13,18 +12,37 @@ dotnet add package newtype
 
 ## Usage
 
-#### Basic: strongly typed `string`-names, `int`-IDs, and `int`-counts
+### Basic: typed IDs and counts
 ```csharp
 using newtype;
 
+[newtype<string>]
+public readonly partial struct TableId;
+
 [newtype<int>]
-public readonly partial struct Pizzas;
+public readonly partial struct PizzasEaten;
 
 [newtype<double>]
 public readonly partial struct Fullness;
+
+class Guest
+{
+    TableId table = "Table 1";
+    PizzasEaten pizzasEaten;
+    Fullness fullness;
+    
+    public void fillEmUp(Fullness threshold)
+    {
+        while (fullness < threshold)
+        {
+            pizzasEaten++;
+            fullness += 0.1;
+        }
+    }
+}
 ```
 
-#### Typical: quantities backed by the same data type. 
+### Typical: quantities backed by the same data type but distinct domain semantics
 *For example, forces, velocities, positions, etc. all lose their semantics when expressed as `Vector3`*
 ```csharp
 using System.Numerics;
@@ -51,7 +69,7 @@ Console.WriteLine(p.Length()); // 3.74...
 Position updated = p + v * deltaTime;
 
 // Implicit conversion both ways
-Vector3 vec = p;                              // Position → Vector3
+Vector3 vec = p;              // Position → Vector3
 Position pos = new Vector3(); // Vector3 → Position
 ```
 
@@ -143,7 +161,7 @@ wrapper entirely in release builds. The generated code has the same performance 
 dotnet add package newtype
 ```
 
-## Viewing Generated Code
+## Viewing Generated Code< If you only knew now what you didn't know then. >
 
 Enable generated file output in your project:
 
