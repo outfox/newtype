@@ -3,93 +3,162 @@ using BenchmarkDotNet.Configs;
 
 namespace newtype.benchmark;
 
+/// <summary>
+/// Compares AggressiveInlining (EntityId) vs default MethodImpl (DefaultImplId) vs raw int
+/// across loop-based workloads to measure whether the JIT inlines both equally.
+/// </summary>
 [MemoryDiagnoser(displayGenColumns: false)]
 [GroupBenchmarksBy(BenchmarkLogicalGroupRule.ByCategory)]
 [CategoriesColumn]
-[DisassemblyDiagnoser(maxDepth: 2)]
+[DisassemblyDiagnoser(maxDepth: 3)]
 [ShortRunJob]
 public class MethodImplBenchmarks
 {
-    private int _rawA, _rawB;
-    private EntityId _inlinedA, _inlinedB;
-    private DefaultImplId _defaultA, _defaultB;
+    private const int N = 1024;
+
+    private int[] _rawArr = null!;
+    private EntityId[] _inlinedArr = null!;
+    private DefaultImplId[] _defaultArr = null!;
 
     [GlobalSetup]
     public void Setup()
     {
-        _rawA = Environment.TickCount;
-        _rawB = Environment.TickCount ^ 0x5DEECE6;
-        _inlinedA = _rawA;
-        _inlinedB = _rawB;
-        _defaultA = new DefaultImplId(_rawA);
-        _defaultB = new DefaultImplId(_rawB);
+        _rawArr = new int[N];
+        _inlinedArr = new EntityId[N];
+        _defaultArr = new DefaultImplId[N];
+
+        for (var i = 0; i < N; i++)
+        {
+            _rawArr[i] = i + 1;
+            _inlinedArr[i] = new EntityId(i + 1);
+            _defaultArr[i] = new DefaultImplId(i + 1);
+        }
     }
 
-    // --- Addition ---
-    [Benchmark(Baseline = true), BenchmarkCategory("Add")]
-    public int Add_Raw() => _rawA + _rawB;
-
-    [Benchmark, BenchmarkCategory("Add")]
-    public EntityId Add_Inlined() => _inlinedA + _inlinedB;
-
-    [Benchmark, BenchmarkCategory("Add")]
-    public DefaultImplId Add_Default() => _defaultA + _defaultB;
-
-    // --- Subtraction ---
-    [Benchmark(Baseline = true), BenchmarkCategory("Sub")]
-    public int Sub_Raw() => _rawA - _rawB;
-
-    [Benchmark, BenchmarkCategory("Sub")]
-    public EntityId Sub_Inlined() => _inlinedA - _inlinedB;
-
-    [Benchmark, BenchmarkCategory("Sub")]
-    public DefaultImplId Sub_Default() => _defaultA - _defaultB;
-
-    // --- Comparison ---
-    [Benchmark(Baseline = true), BenchmarkCategory("Cmp")]
-    public bool Cmp_Raw() => _rawA < _rawB;
-
-    [Benchmark, BenchmarkCategory("Cmp")]
-    public bool Cmp_Inlined() => _inlinedA < _inlinedB;
-
-    [Benchmark, BenchmarkCategory("Cmp")]
-    public bool Cmp_Default() => _defaultA < _defaultB;
-
-    // --- Construction + Conversion ---
-    [Benchmark(Baseline = true), BenchmarkCategory("Ctor")]
-    public int Ctor_Raw() => _rawA;
-
-    [Benchmark, BenchmarkCategory("Ctor")]
-    public int Ctor_Inlined() => new EntityId(_rawA).Value;
-
-    [Benchmark, BenchmarkCategory("Ctor")]
-    public int Ctor_Default() => new DefaultImplId(_rawA).Value;
-
-    // --- Loop accumulation ---
-    [Benchmark(Baseline = true), BenchmarkCategory("Loop")]
-    public int Loop_Raw()
+    // --- Sum (addition loop) ---
+    [Benchmark(Baseline = true), BenchmarkCategory("Sum")]
+    public int Sum_Raw()
     {
-        int sum = 0;
-        for (int i = 0; i < 1000; i++)
-            sum += i;
+        var sum = 0;
+        var arr = _rawArr;
+        for (var i = 0; i < arr.Length; i++)
+            sum += arr[i];
         return sum;
     }
 
-    [Benchmark, BenchmarkCategory("Loop")]
-    public EntityId Loop_Inlined()
+    [Benchmark, BenchmarkCategory("Sum")]
+    public EntityId Sum_Inlined()
     {
-        EntityId sum = new EntityId(0);
-        for (int i = 0; i < 1000; i++)
-            sum = sum + new EntityId(i);
+        var sum = new EntityId(0);
+        var arr = _inlinedArr;
+        for (var i = 0; i < arr.Length; i++)
+            sum = sum + arr[i];
         return sum;
     }
 
-    [Benchmark, BenchmarkCategory("Loop")]
-    public DefaultImplId Loop_Default()
+    [Benchmark, BenchmarkCategory("Sum")]
+    public DefaultImplId Sum_Default()
     {
-        DefaultImplId sum = new DefaultImplId(0);
-        for (int i = 0; i < 1000; i++)
-            sum = sum + new DefaultImplId(i);
+        var sum = new DefaultImplId(0);
+        var arr = _defaultArr;
+        for (var i = 0; i < arr.Length; i++)
+            sum = sum + arr[i];
         return sum;
+    }
+
+    // --- Multiply-accumulate: sum += arr[i] * i ---
+    [Benchmark(Baseline = true), BenchmarkCategory("MulAcc")]
+    public int MulAcc_Raw()
+    {
+        var sum = 0;
+        var arr = _rawArr;
+        for (var i = 0; i < arr.Length; i++)
+            sum += arr[i] * i;
+        return sum;
+    }
+
+    [Benchmark, BenchmarkCategory("MulAcc")]
+    public EntityId MulAcc_Inlined()
+    {
+        var sum = new EntityId(0);
+        var arr = _inlinedArr;
+        for (var i = 0; i < arr.Length; i++)
+            sum = sum + arr[i] * new EntityId(i);
+        return sum;
+    }
+
+    [Benchmark, BenchmarkCategory("MulAcc")]
+    public DefaultImplId MulAcc_Default()
+    {
+        var sum = new DefaultImplId(0);
+        var arr = _defaultArr;
+        for (var i = 0; i < arr.Length; i++)
+            sum = sum + arr[i] * new DefaultImplId(i);
+        return sum;
+    }
+
+    // --- Min (comparison loop) ---
+    [Benchmark(Baseline = true), BenchmarkCategory("Min")]
+    public int Min_Raw()
+    {
+        var arr = _rawArr;
+        var min = arr[0];
+        for (var i = 1; i < arr.Length; i++)
+            if (arr[i] < min)
+                min = arr[i];
+        return min;
+    }
+
+    [Benchmark, BenchmarkCategory("Min")]
+    public EntityId Min_Inlined()
+    {
+        var arr = _inlinedArr;
+        var min = arr[0];
+        for (var i = 1; i < arr.Length; i++)
+            if (arr[i] < min)
+                min = arr[i];
+        return min;
+    }
+
+    [Benchmark, BenchmarkCategory("Min")]
+    public DefaultImplId Min_Default()
+    {
+        var arr = _defaultArr;
+        var min = arr[0];
+        for (var i = 1; i < arr.Length; i++)
+            if (arr[i] < min)
+                min = arr[i];
+        return min;
+    }
+
+    // --- XOR fold (bitwise loop) ---
+    [Benchmark(Baseline = true), BenchmarkCategory("Xor")]
+    public int Xor_Raw()
+    {
+        var acc = 0;
+        var arr = _rawArr;
+        for (var i = 0; i < arr.Length; i++)
+            acc ^= arr[i];
+        return acc;
+    }
+
+    [Benchmark, BenchmarkCategory("Xor")]
+    public EntityId Xor_Inlined()
+    {
+        var acc = new EntityId(0);
+        var arr = _inlinedArr;
+        for (var i = 0; i < arr.Length; i++)
+            acc = acc ^ arr[i];
+        return acc;
+    }
+
+    [Benchmark, BenchmarkCategory("Xor")]
+    public DefaultImplId Xor_Default()
+    {
+        var acc = new DefaultImplId(0);
+        var arr = _defaultArr;
+        for (var i = 0; i < arr.Length; i++)
+            acc = acc ^ arr[i];
+        return acc;
     }
 }
