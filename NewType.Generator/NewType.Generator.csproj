@@ -22,6 +22,10 @@
         <PackageReadmeFile>NUGET.md</PackageReadmeFile>
         <PackageIcon>icon.png</PackageIcon>
 
+        <!-- Source generators are loaded by Roslyn, not executed standalone — deps.json is unnecessary
+             and causes file-lock races when multiple projects build the generator in parallel. -->
+        <GenerateDependencyFile>false</GenerateDependencyFile>
+
         <!-- Important: Include the generator as an analyzer -->
         <IncludeBuildOutput>false</IncludeBuildOutput>
         <DevelopmentDependency>true</DevelopmentDependency>
