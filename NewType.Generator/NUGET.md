@@ -12,18 +12,37 @@ dotnet add package newtype
 
 ## Usage
 
-#### Basic: strongly typed `string`-names, `int`-IDs, and `int`-counts
+#### Basic: typed IDs and counts
 ```csharp
 using newtype;
 
+[newtype<string>]
+public readonly partial struct TableId;
+
 [newtype<int>]
-public readonly partial struct Pizzas;
+public readonly partial struct PizzasEaten;
 
 [newtype<double>]
 public readonly partial struct Fullness;
+
+class Guest
+{
+    TableId table = "Table 1";
+    PizzasEaten pizzasEaten;
+    Fullness fullness;
+    
+    public void fillEmUp(Fullness threshold)
+    {
+        while (fullness < threshold)
+        {
+            pizzasEaten++;
+            fullness += 0.1;
+        }
+    }
+}
 ```
 
-#### Typical: quantities backed by the same data type. 
+#### Typical: quantities backed by the same data type but distinct domain semantics
 *For example, forces, velocities, positions, etc. all lose their semantics when expressed as `Vector3`*
 ```csharp
 using System.Numerics;
