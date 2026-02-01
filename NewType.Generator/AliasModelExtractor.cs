@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Globalization;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -144,7 +145,7 @@ internal static class AliasModelExtractor
             if (member.Name.StartsWith("op_"))
                 continue;
 
-            if (member is IPropertySymbol prop)
+            if (member is IPropertySymbol {GetMethod: not null} prop)
             {
                 builder.Add(new StaticMemberInfo(
                     Name: prop.Name,
@@ -194,7 +195,7 @@ internal static class AliasModelExtractor
 
         foreach (var member in aliasedType.GetMembers())
         {
-            if (member is IPropertySymbol {IsStatic: false, DeclaredAccessibility: Accessibility.Public, IsIndexer: false} prop)
+            if (member is IPropertySymbol {IsStatic: false, DeclaredAccessibility: Accessibility.Public, IsIndexer: false, GetMethod: not null} prop)
             {
                 builder.Add(new InstancePropertyInfo(
                     Name: prop.Name,
@@ -329,7 +330,16 @@ internal static class AliasModelExtractor
     private static string GetConstructorSignature(IMethodSymbol ctor)
     {
         return string.Join(",", ctor.Parameters.Select(p =>
-            p.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)));
+        {
+            var refModifier = p.RefKind switch
+            {
+                RefKind.Ref => "ref ",
+                RefKind.Out => "out ",
+                RefKind.In => "in ",
+                _ => ""
+            };
+            return refModifier + p.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+        }));
     }
 
     private static string FormatDefaultValue(IParameterSymbol param)
@@ -340,24 +350,24 @@ internal static class AliasModelExtractor
             return "default";
 
         if (value is string s)
-            return $"\"{s.Replace("\\", "\\\\").Replace("\"", "\\\"")}\"";
+            return SymbolDisplay.FormatLiteral(s, true);
 
         if (value is char c)
-            return $"'{c}'";
+            return SymbolDisplay.FormatLiteral(c, true);
 
         if (value is bool b)
             return b ? "true" : "false";
 
         if (value is float f)
-            return f.ToString("R") + "f";
+            return f.ToString("R", CultureInfo.InvariantCulture) + "f";
 
         if (value is double d)
-            return d.ToString("R") + "d";
+            return d.ToString("R", CultureInfo.InvariantCulture) + "d";
 
         if (value is decimal m)
-            return m.ToString() + "m";
+            return m.ToString(CultureInfo.InvariantCulture) + "m";
 
-        return value.ToString();
+        return string.Format(CultureInfo.InvariantCulture, "{0}", value);
     }
 
     private static bool HasNativeEqualityOperator(ITypeSymbol type,

@@ -201,11 +201,15 @@ internal class AliasCodeGenerator
                 _sb.AppendLine();
 
                 // Also generate alias op T for cross-type interop
+                // Note: T op alias is intentionally omitted here — when multiple aliases share
+                // the same underlying type T, emitting both directions creates ambiguous overloads
+                // (e.g. Position + Velocity would match both Vector3+Position and Velocity+Vector3).
+                // The implicit conversion to T already covers the T op alias case.
                 _sb.AppendLine($"{indent}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
                 _sb.AppendLine($"{indent}public static {returnTypeStr} operator {opSymbol}({_model.TypeName} left, {_model.AliasedTypeFullName} right) => left._value {opSymbol} right;");
                 _sb.AppendLine();
             }
-            // Operator with aliased type on left only
+            // Operator with aliased type on left only — also emit T op Alias
             else if (op.LeftIsAliasedType && !op.RightIsAliasedType)
             {
                 var returnTypeStr = op.ReturnIsAliasedType
@@ -216,7 +220,7 @@ internal class AliasCodeGenerator
                 _sb.AppendLine($"{indent}public static {returnTypeStr} operator {opSymbol}({_model.TypeName} left, {op.RightTypeFullName} right) => left._value {opSymbol} right;");
                 _sb.AppendLine();
             }
-            // Operator with aliased type on right only
+            // Operator with aliased type on right only — also emit Alias op T
             else if (!op.LeftIsAliasedType && op.RightIsAliasedType)
             {
                 var returnTypeStr = op.ReturnIsAliasedType

@@ -1,6 +1,6 @@
 # `newtype` *(Distinct Type Aliases for C#)*
 
-![logo, a stylized N with a red and Blue half](https://raw.githubusercontent.com/outfox/newtype/main/logo.svg)
+![logo, a stylized N with a red and blue half](https://raw.githubusercontent.com/outfox/newtype/main/logo.svg)
 
 This package is a source generator that creates distinct type aliases with full operator and constructor forwarding. Inspired by Haskell's `newtype` and F#'s type abbreviations. `newtype` works for a healthy number of types - many primitives, structs, records, classes work out of the box.
 
@@ -12,7 +12,7 @@ dotnet add package newtype
 
 ## Usage
 
-#### Basic: typed IDs and counts
+### Basic: typed IDs and counts
 ```csharp
 using newtype;
 
@@ -42,7 +42,7 @@ class Guest
 }
 ```
 
-#### Typical: quantities backed by the same data type but distinct domain semantics
+### Typical: quantities backed by the same data type but distinct domain semantics
 *For example, forces, velocities, positions, etc. all lose their semantics when expressed as `Vector3`*
 ```csharp
 using System.Numerics;
@@ -161,7 +161,7 @@ wrapper entirely in release builds. The generated code has the same performance 
 dotnet add package newtype
 ```
 
-## Viewing Generated Code
+## Viewing Generated Code< If you only knew now what you didn't know then. >
 
 Enable generated file output in your project:
 

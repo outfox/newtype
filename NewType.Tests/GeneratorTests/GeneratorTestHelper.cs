@@ -15,7 +15,7 @@ internal static class GeneratorTestHelper
         var compilation = CSharpCompilation.Create(
             "Tests",
             [syntaxTree],
-            Net80.References.All,
+            Net100.References.All,
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
 
         var generator = new AliasGenerator().AsSourceGenerator();
@@ -48,7 +48,7 @@ internal static class GeneratorTestHelper
         var compilation = CSharpCompilation.Create(
             "Tests",
             [syntaxTree],
-            Net80.References.All,
+            Net100.References.All,
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
 
         var generator = new AliasGenerator().AsSourceGenerator();

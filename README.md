@@ -18,7 +18,7 @@ dotnet add package newtype
 
 ## Usage
 
-#### Basic: typed IDs and counts
+### Basic: typed IDs and counts
 ```csharp
 using newtype;
 
@@ -48,7 +48,7 @@ class Guest
 }
 ```
 
-#### Typical: quantities backed by the same data type but distinct domain semantics
+### Typical: quantities backed by the same data type but distinct domain semantics
 *For example, forces, velocities, positions, etc. all lose their semantics when expressed as `Vector3`*
 ```csharp
 using System.Numerics;
