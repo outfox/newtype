@@ -8,7 +8,7 @@ namespace newtype.generator;
 /// Fully-extracted, equatable model representing a newtype alias.
 /// Contains only strings, bools, plain enums, and EquatableArrays — no Roslyn symbols.
 /// </summary>
-internal readonly record struct AliasModel(
+internal record AliasModel(
     // Type being declared
     string TypeName,
     string Namespace,
@@ -16,8 +16,10 @@ internal readonly record struct AliasModel(
     bool IsReadonly,
     bool IsClass,
     bool IsRecord,
-    bool IsRecordStruct,
-
+    
+    // Location for messages
+    Location? Location,
+    
     // Aliased type
     string AliasedTypeFullName,
     string AliasedTypeMinimalName,
@@ -41,6 +43,10 @@ internal readonly record struct AliasModel(
     bool SuppressImplicitUnwrap,
     bool SuppressConstructorForwarding,
     int MethodImplValue,
+    
+    bool IncludeConstraints,
+    bool DebugOnlyConstraints,
+    bool validValidationMethod,
 
     // Members
     EquatableArray<BinaryOperatorInfo> BinaryOperators,
@@ -50,7 +56,12 @@ internal readonly record struct AliasModel(
     EquatableArray<InstancePropertyInfo> InstanceProperties,
     EquatableArray<InstanceMethodInfo> InstanceMethods,
     EquatableArray<ConstructorInfo> ForwardedConstructors
-);
+)
+{ 
+    public const string ConstraintValidationMethodSymbol = "IsValid";
+};
+
+internal readonly record struct ExtractedOptions(int Options, int ConstraintOptions, int MethodImpl);
 
 internal readonly record struct BinaryOperatorInfo(
     string Name,

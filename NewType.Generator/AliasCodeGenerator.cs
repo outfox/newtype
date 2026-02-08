@@ -18,6 +18,9 @@ internal class AliasCodeGenerator
     private readonly AliasModel _model;
     private readonly StringBuilder _sb = new();
 
+    const string SingleIndent = "    ";
+
+    
     public AliasCodeGenerator(AliasModel model)
     {
         _model = model;
@@ -137,12 +140,28 @@ internal class AliasCodeGenerator
 
     private void AppendConstructors()
     {
-        var indent = GetMemberIndent();
+        var memberIndent = GetMemberIndent();
 
         // Constructor from aliased type (always emitted)
-        _sb.AppendLine($"{indent}/// <summary>Creates a new {_model.TypeName} from a {_model.AliasedTypeMinimalName}.</summary>");
-        AppendMethodImplAttribute(indent);
-        _sb.AppendLine($"{indent}public {_model.TypeName}({_model.AliasedTypeFullName} value) => _value = value;");
+        _sb.AppendLine($"{memberIndent}/// <summary>Creates a new {_model.TypeName} from a {_model.AliasedTypeMinimalName}.</summary>");
+        AppendMethodImplAttribute(memberIndent);
+        
+        
+        if (_model.IncludeConstraints)
+        {
+            _sb.AppendLine($"{memberIndent}public {_model.TypeName}({_model.AliasedTypeFullName} value)");
+            _sb.Append(memberIndent).Append('{').AppendLine();
+            
+            AppendConstraintChecker(SingleIndent, "value");
+            _sb.Append(SingleIndent).Append(SingleIndent).Append(SingleIndent).AppendLine("_value = value;"); 
+            
+            _sb.Append(memberIndent).Append('}').AppendLine();
+        }
+        else
+        { 
+            _sb.AppendLine($"{memberIndent}public {_model.TypeName}({_model.AliasedTypeFullName} value) => _value = value;");
+        }
+        
         _sb.AppendLine();
 
         // Forward constructors from the aliased type (conditionally)
@@ -150,7 +169,7 @@ internal class AliasCodeGenerator
         {
             foreach (var ctor in _model.ForwardedConstructors)
             {
-                AppendForwardedConstructor(indent, ctor);
+                AppendForwardedConstructor(memberIndent, ctor);
             }
         }
     }
@@ -668,7 +687,22 @@ internal class AliasCodeGenerator
 
         _sb.AppendLine($"{indent}/// <summary>Forwards {_model.AliasedTypeMinimalName} constructor.</summary>");
         AppendMethodImplAttribute(indent);
-        _sb.AppendLine($"{indent}public {_model.TypeName}({parameters}) => _value = new {_model.AliasedTypeFullName}({arguments});");
+        if (_model.IncludeConstraints)
+        {
+            const string valueName = "newValue";
+            _sb.AppendLine($"{indent}public {_model.TypeName}({parameters})");
+            _sb.Append(indent).Append('{').AppendLine();
+            _sb.Append(indent).Append(SingleIndent).AppendLine($"var {valueName} = new {_model.AliasedTypeFullName}({arguments});");
+            
+            AppendConstraintChecker(SingleIndent, valueName);
+            _sb.Append(SingleIndent).Append(SingleIndent).Append(SingleIndent).AppendLine($"_value = {valueName};"); 
+            
+            _sb.Append(indent).Append('}').AppendLine();
+        }
+        else
+        { 
+            _sb.AppendLine($"{indent}public {_model.TypeName}({parameters}) => _value = new {_model.AliasedTypeFullName}({arguments});");
+        }
         _sb.AppendLine();
     }
 
@@ -691,6 +725,23 @@ internal class AliasCodeGenerator
             _sb.AppendLine(line);
     }
 
+    private void AppendConstraintChecker(string indent, string valueName)
+    {
+        if (!_model.validValidationMethod) return;
+        
+        if (_model.DebugOnlyConstraints)
+            _sb.AppendLine("#if DEBUG");
+        
+        _sb.Append(indent).Append(indent).Append(indent)
+            .AppendLine($"if (!IsValid({valueName}))");
+        _sb.Append(indent).Append(indent).Append(indent).Append(indent)
+            .AppendLine($"throw new InvalidOperationException($\"Failed validation check when trying to create '{_model.TypeName}' with '{_model.AliasedTypeMinimalName}' value: {{{valueName}}}\");"); // we heard you like interpolation
+        
+        
+        if (_model.DebugOnlyConstraints)
+            _sb.AppendLine("#endif");
+    }
+    
     private static string FormatConstructorParameters(ConstructorInfo ctor)
     {
         return string.Join(", ", ctor.Parameters.Array.Select(p =>
@@ -728,7 +779,7 @@ internal class AliasCodeGenerator
         }));
     }
 
-    private string GetMemberIndent() => string.IsNullOrEmpty(_model.Namespace) ? "    " : "        ";
+    private string GetMemberIndent() => string.IsNullOrEmpty(_model.Namespace) ? SingleIndent : $"{SingleIndent}{SingleIndent}";
 
     private static string? GetOperatorSymbol(string operatorName)
     {

@@ -16,16 +16,17 @@ internal static class AliasModelExtractor
     private const int OptionsNoImplicitWrap = 1;
     private const int OptionsNoImplicitUnwrap = 2;
     private const int OptionsNoConstructorForwarding = 4;
+    private const int OptionsUseConstraints = 1;
+    private const int OptionsConstraintsInRelease = 2;
 
     public static AliasModel? Extract(
         GeneratorAttributeSyntaxContext context,
         ITypeSymbol aliasedType,
-        int options,
-        int methodImpl)
+        ExtractedOptions allOptions)
     {
         var typeDecl = (TypeDeclarationSyntax)context.TargetNode;
         var typeSymbol = (INamedTypeSymbol)context.TargetSymbol;
-
+        
         var typeName = typeSymbol.Name;
         var ns = typeSymbol.ContainingNamespace;
         var namespaceName = ns is {IsGlobalNamespace: false} ? ns.ToDisplayString() : "";
@@ -35,7 +36,6 @@ internal static class AliasModelExtractor
                       || (typeDecl is RecordDeclarationSyntax rds
                           && !rds.ClassOrStructKeyword.IsKind(SyntaxKind.StructKeyword));
         var isRecord = typeDecl is RecordDeclarationSyntax;
-        var isRecordStruct = isRecord && !isClass;
 
         var aliasedTypeFullName = aliasedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
         var aliasedTypeMinimalName = aliasedType.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat);
@@ -55,7 +55,11 @@ internal static class AliasModelExtractor
         var constructors = ExtractForwardableConstructors(typeSymbol, aliasedType);
 
         var typeDisplayString = typeSymbol.ToDisplayString();
+        var validIsValid = HasValidIsValid(typeSymbol, aliasedType);
 
+        var useConstraints = (allOptions.ConstraintOptions & OptionsUseConstraints) != 0;
+     
+        
         return new AliasModel(
             TypeName: typeName,
             Namespace: namespaceName,
@@ -63,7 +67,7 @@ internal static class AliasModelExtractor
             IsReadonly: isReadonly,
             IsClass: isClass,
             IsRecord: isRecord,
-            IsRecordStruct: isRecordStruct,
+            Location: typeSymbol.Locations.FirstOrDefault(),
             AliasedTypeFullName: aliasedTypeFullName,
             AliasedTypeMinimalName: aliasedTypeMinimalName,
             AliasedTypeSpecialType: aliasedType.SpecialType,
@@ -73,10 +77,13 @@ internal static class AliasModelExtractor
             HasNativeEqualityOperator: hasNativeEquality,
             TypeDisplayString: typeDisplayString,
             HasStaticMemberCandidates: hasStaticMemberCandidates,
-            SuppressImplicitWrap: (options & OptionsNoImplicitWrap) != 0,
-            SuppressImplicitUnwrap: (options & OptionsNoImplicitUnwrap) != 0,
-            SuppressConstructorForwarding: (options & OptionsNoConstructorForwarding) != 0,
-            MethodImplValue: methodImpl,
+            SuppressImplicitWrap: (allOptions.Options & OptionsNoImplicitWrap) != 0,
+            SuppressImplicitUnwrap: (allOptions.Options & OptionsNoImplicitUnwrap) != 0,
+            SuppressConstructorForwarding: (allOptions.Options & OptionsNoConstructorForwarding) != 0,
+            MethodImplValue: allOptions.MethodImpl,
+            IncludeConstraints: useConstraints,
+            DebugOnlyConstraints: (allOptions.ConstraintOptions & OptionsConstraintsInRelease) == 0, // inverse
+            validValidationMethod: validIsValid,
             BinaryOperators: binaryOperators,
             UnaryOperators: unaryOperators,
             StaticMembers: staticMembers,
@@ -353,6 +360,24 @@ internal static class AliasModelExtractor
             };
             return refModifier + p.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
         }));
+    }
+
+    private static bool HasValidIsValid(ITypeSymbol targetType, ITypeSymbol aliasedType)
+    {
+        // does not have to be static, even it is more "hygienic"
+        // seems like it would a be a little annoying to enforce if not strictly needed
+        IMethodSymbol? isValidMethod =
+            targetType
+                .GetMembers(AliasModel.ConstraintValidationMethodSymbol)
+                .OfType<IMethodSymbol>()
+                .FirstOrDefault(m =>
+                    m.ReturnType.SpecialType == SpecialType.System_Boolean &&
+                    m.Parameters.Length == 1 &&
+                    SymbolEqualityComparer.Default.Equals(
+                        m.Parameters[0].Type,
+                        aliasedType));
+        
+        return isValidMethod != null;
     }
 
     private static string FormatDefaultValue(IParameterSymbol param)

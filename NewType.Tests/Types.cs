@@ -8,6 +8,17 @@ public readonly partial struct Position;
 [newtype<Vector3>]
 public readonly partial struct Velocity;
 
+[newtype<Vector2>(ConstraintOptions = NewtypeConstraintOptions.ReleaseEnabled)]
+public readonly partial struct Direction
+{
+    private static bool IsValid(Vector2 direction)
+    {
+        // enforce normalized
+        const float epsilon = 0.0001f;
+        return Math.Abs(direction.LengthSquared() - 1f) < epsilon;
+    }
+}
+
 [newtype<Vector3>]
 public readonly partial struct Scale;
 
@@ -103,6 +114,5 @@ public readonly partial struct RelaxedId;
 // "Extending Your Types" example — custom cross-type operator
 public readonly partial struct Position
 {
-    public static Position operator +(Position p, Velocity v)
-        => new(p.Value + v.Value);
+    public static Position operator +(Position p, Velocity v) => new(p.Value + v.Value);
 }

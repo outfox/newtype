@@ -35,7 +35,26 @@ internal static class NewtypeAttributeSource
                                          /// <summary>Suppress implicit conversions and constructor forwarding.</summary>
                                          Opaque                  = NoImplicitConversions | NoConstructorForwarding,
                                      }
-
+                                     
+                                     /// <summary>
+                                     /// Controls which constraint-related features the newtype generator emits. If enabled,
+                                     /// will automatically call a user-defined 'bool IsValid(AliasedType value)' method on the newtype
+                                     /// to verify it is valid
+                                     /// </summary>
+                                     [global::System.Flags]
+                                     internal enum NewtypeConstraintOptions
+                                     {
+                                         /// <summary>Constraints disabled(default).</summary>
+                                         Disabled               = 0,
+                                         /// <summary>Enable constraints. Debug builds only by default</summary>
+                                         Enabled                = 1,
+                                         /// <summary>Include constraint code in release builds, if constraints are enabled</summary>
+                                         IncludeInRelease       = 2,
+                                         
+                                         /// <summary>Enable constraints and include in release builds.</summary>
+                                         ReleaseEnabled         = Enabled | IncludeInRelease,
+                                     }
+                                     
                                      /// <summary>
                                      /// Marks a partial type as a type alias for the specified type.
                                      /// The source generator will generate implicit conversions, operator forwarding,
@@ -54,7 +73,10 @@ internal static class NewtypeAttributeSource
 
                                          /// <summary>Controls which features the generator emits.</summary>
                                          public NewtypeOptions Options { get; set; }
-
+                                         
+                                         /// <summary>Controls which constraint features the generator emits.</summary>
+                                         public NewtypeConstraintOptions ConstraintOptions { get; set; }
+                                         
                                          /// <summary>
                                          /// Overrides the MethodImplOptions applied to generated members.
                                          /// Default is <see cref="global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining"/>.
