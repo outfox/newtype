@@ -12,23 +12,14 @@ namespace newtype.generator;
 [Generator(LanguageNames.CSharp)]
 public class AliasGenerator : IIncrementalGenerator
 {
-    private static readonly DiagnosticDescriptor MissingIsValidMethodDiagnostic =
-        new DiagnosticDescriptor(
-            id: "NEWTYPE001",
-            title: "Missing validation method",
-            messageFormat: $"Type '{{0}}' uses constraints but does not define a compatible validation method. Expected signature: 'bool {AliasModel.ConstraintValidationMethodSymbol}({{1}})'.",
-            category: "Unknown",
-            DiagnosticSeverity.Error,
-            isEnabledByDefault: true,
-            description: "A constraint-enabled wrapped type must define a validation method."
-        );
-    
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         // Register the attribute source
         context.RegisterPostInitializationOutput(ctx =>
         {
             ctx.AddSource("newtypeAttribute.g.cs", SourceText.From(NewtypeAttributeSource.Source, Encoding.UTF8));
+            ctx.AddSource("newtypeConstraintAttribute.g.cs",
+                SourceText.From(ConstraintAttributeSource.Source, Encoding.UTF8));
         });
 
         // Pipeline for generic [newtype<T>] attribute
@@ -88,14 +79,12 @@ public class AliasGenerator : IIncrementalGenerator
     // Mirrors MethodImplOptions.AggressiveInlining — the generator can't reference
     // the injected NewtypeOptions enum, and we want readable defaults.
     private const int DefaultOptions = 0;
-    private const int DefaultConstraintOptions = 0;
     private const int DefaultMethodImplAggressiveInlining = 256;
 
     private static ExtractedOptions ExtractNamedArguments(
         AttributeData attributeData)
     {
         int options = DefaultOptions;
-        int constraintOptions = DefaultConstraintOptions;
         int methodImpl = DefaultMethodImplAggressiveInlining;
 
         foreach (var arg in attributeData.NamedArguments)
@@ -105,39 +94,64 @@ public class AliasGenerator : IIncrementalGenerator
                 case "Options":
                     options = (int)arg.Value.Value!;
                     break;
-                case "ConstraintOptions":
-                    constraintOptions = (int)arg.Value.Value!;
-                    break;
                 case "MethodImpl":
                     methodImpl = (int)arg.Value.Value!;
                     break;
             }
         }
 
-        return new ExtractedOptions(options, constraintOptions, methodImpl);
+        return new ExtractedOptions(options, methodImpl);
     }
 
     private static void GenerateAliasCode(
         SourceProductionContext context,
         AliasModel model)
     {
-        if (model.IncludeConstraints && !model.validValidationMethod)
+        if (!model.ConstraintModel.Valid)
         {
             context.ReportDiagnostic(
                 Diagnostic.Create(
-                    MissingIsValidMethodDiagnostic,
-                    model.Location,
+                    ValidatorInvalidDiagnostic, model.ConstraintModel.LocationInfo?.ToLocation(),
                     model.TypeName,
-                    model.AliasedTypeFullName
+                    model.ConstraintModel.ValidationSymbolName ?? "Method",
+                    model.AliasedTypeMinimalName
                 ));
 
             return;
         }
-        
+
+        if (model.ConstraintModel.Multiple)
+        {
+            context.ReportDiagnostic(
+                Diagnostic.Create(ValidatorMultipleDiagnostic, model.LocationInfo?.ToLocation())
+            );
+            return;
+        }
+
         var generator = new AliasCodeGenerator(model);
         var source = generator.Generate();
-        
+
         var fileName = $"{model.TypeDisplayString.Replace(".", "_").Replace("<", "_").Replace(">", "_")}.g.cs";
         context.AddSource(fileName, SourceText.From(source, Encoding.UTF8));
     }
+
+    private static readonly DiagnosticDescriptor ValidatorInvalidDiagnostic =
+        new(
+            id: "NEWTYPE001",
+            title: "Malformed validation method",
+            messageFormat: "Incorrectly formed validation method for type '{0}'. Expected signature: 'bool {1}({2})'.",
+            category: "Unknown",
+            DiagnosticSeverity.Error,
+            isEnabledByDefault: true
+        );
+
+    private static readonly DiagnosticDescriptor ValidatorMultipleDiagnostic =
+        new(
+            id: "NEWTYPE002",
+            title: "Multiple validators",
+            messageFormat: "Only a single validation method should be used",
+            category: "Unknown",
+            DiagnosticSeverity.Error,
+            isEnabledByDefault: true
+        );
 }

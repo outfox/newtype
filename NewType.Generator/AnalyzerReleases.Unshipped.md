@@ -6,3 +6,4 @@
 | Rule ID    | Category  | Severity | Notes          |
 |------------|-----------|----------|----------------|
 | NEWTYPE001 | `Unknown` | Error    | AliasGenerator |
+| NEWTYPE002 | `Unknown` | Error    | AliasGenerator |

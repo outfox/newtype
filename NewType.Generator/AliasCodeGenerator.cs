@@ -20,7 +20,6 @@ internal class AliasCodeGenerator
 
     const string SingleIndent = "    ";
 
-    
     public AliasCodeGenerator(AliasModel model)
     {
         _model = model;
@@ -143,25 +142,27 @@ internal class AliasCodeGenerator
         var memberIndent = GetMemberIndent();
 
         // Constructor from aliased type (always emitted)
-        _sb.AppendLine($"{memberIndent}/// <summary>Creates a new {_model.TypeName} from a {_model.AliasedTypeMinimalName}.</summary>");
+        _sb.AppendLine(
+            $"{memberIndent}/// <summary>Creates a new {_model.TypeName} from a {_model.AliasedTypeMinimalName}.</summary>");
         AppendMethodImplAttribute(memberIndent);
-        
-        
-        if (_model.IncludeConstraints)
+
+
+        if (_model.ConstraintModel.UseConstraints)
         {
             _sb.AppendLine($"{memberIndent}public {_model.TypeName}({_model.AliasedTypeFullName} value)");
             _sb.Append(memberIndent).Append('{').AppendLine();
-            
+
             AppendConstraintChecker(SingleIndent, "value");
-            _sb.Append(SingleIndent).Append(SingleIndent).Append(SingleIndent).AppendLine("_value = value;"); 
-            
+            _sb.Append(SingleIndent).Append(SingleIndent).Append(SingleIndent).AppendLine("_value = value;");
+
             _sb.Append(memberIndent).Append('}').AppendLine();
         }
         else
-        { 
-            _sb.AppendLine($"{memberIndent}public {_model.TypeName}({_model.AliasedTypeFullName} value) => _value = value;");
+        {
+            _sb.AppendLine(
+                $"{memberIndent}public {_model.TypeName}({_model.AliasedTypeFullName} value) => _value = value;");
         }
-        
+
         _sb.AppendLine();
 
         // Forward constructors from the aliased type (conditionally)
@@ -193,18 +194,22 @@ internal class AliasCodeGenerator
         // Implicit from aliased type to alias (T → Alias)
         if (!_model.SuppressImplicitWrap)
         {
-            _sb.AppendLine($"{indent}/// <summary>Implicitly converts from {_model.AliasedTypeMinimalName} to {_model.TypeName}.</summary>");
+            _sb.AppendLine(
+                $"{indent}/// <summary>Implicitly converts from {_model.AliasedTypeMinimalName} to {_model.TypeName}.</summary>");
             AppendMethodImplAttribute(indent);
-            _sb.AppendLine($"{indent}public static implicit operator {_model.TypeName}({_model.AliasedTypeFullName} value) => new {_model.TypeName}(value);");
+            _sb.AppendLine(
+                $"{indent}public static implicit operator {_model.TypeName}({_model.AliasedTypeFullName} value) => new {_model.TypeName}(value);");
             _sb.AppendLine();
         }
 
         // Implicit from alias to aliased type (Alias → T)
         if (!_model.SuppressImplicitUnwrap)
         {
-            _sb.AppendLine($"{indent}/// <summary>Implicitly converts from {_model.TypeName} to {_model.AliasedTypeMinimalName}.</summary>");
+            _sb.AppendLine(
+                $"{indent}/// <summary>Implicitly converts from {_model.TypeName} to {_model.AliasedTypeMinimalName}.</summary>");
             AppendMethodImplAttribute(indent);
-            _sb.AppendLine($"{indent}public static implicit operator {_model.AliasedTypeFullName}({_model.TypeName} value) => value._value;");
+            _sb.AppendLine(
+                $"{indent}public static implicit operator {_model.AliasedTypeFullName}({_model.TypeName} value) => value._value;");
             _sb.AppendLine();
         }
     }
@@ -233,7 +238,8 @@ internal class AliasCodeGenerator
 
                 var expr1 = WrapIfAlias(op.ReturnIsAliasedType, $"left._value {opSymbol} right._value");
                 AppendMethodImplAttribute(indent);
-                _sb.AppendLine($"{indent}public static {returnTypeStr} operator {opSymbol}({_model.TypeName} left, {_model.TypeName} right) => {expr1};");
+                _sb.AppendLine(
+                    $"{indent}public static {returnTypeStr} operator {opSymbol}({_model.TypeName} left, {_model.TypeName} right) => {expr1};");
                 _sb.AppendLine();
 
                 // Also generate alias op T for cross-type interop
@@ -243,7 +249,8 @@ internal class AliasCodeGenerator
                 // The implicit conversion to T already covers the T op alias case.
                 var expr2 = WrapIfAlias(op.ReturnIsAliasedType, $"left._value {opSymbol} right");
                 AppendMethodImplAttribute(indent);
-                _sb.AppendLine($"{indent}public static {returnTypeStr} operator {opSymbol}({_model.TypeName} left, {_model.AliasedTypeFullName} right) => {expr2};");
+                _sb.AppendLine(
+                    $"{indent}public static {returnTypeStr} operator {opSymbol}({_model.TypeName} left, {_model.AliasedTypeFullName} right) => {expr2};");
                 _sb.AppendLine();
             }
             // Operator with aliased type on left only — also emit T op Alias
@@ -255,7 +262,8 @@ internal class AliasCodeGenerator
 
                 var expr = WrapIfAlias(op.ReturnIsAliasedType, $"left._value {opSymbol} right");
                 AppendMethodImplAttribute(indent);
-                _sb.AppendLine($"{indent}public static {returnTypeStr} operator {opSymbol}({_model.TypeName} left, {op.RightTypeFullName} right) => {expr};");
+                _sb.AppendLine(
+                    $"{indent}public static {returnTypeStr} operator {opSymbol}({_model.TypeName} left, {op.RightTypeFullName} right) => {expr};");
                 _sb.AppendLine();
             }
             // Operator with aliased type on right only — also emit Alias op T
@@ -267,7 +275,8 @@ internal class AliasCodeGenerator
 
                 var expr = WrapIfAlias(op.ReturnIsAliasedType, $"left {opSymbol} right._value");
                 AppendMethodImplAttribute(indent);
-                _sb.AppendLine($"{indent}public static {returnTypeStr} operator {opSymbol}({op.LeftTypeFullName} left, {_model.TypeName} right) => {expr};");
+                _sb.AppendLine(
+                    $"{indent}public static {returnTypeStr} operator {opSymbol}({op.LeftTypeFullName} left, {_model.TypeName} right) => {expr};");
                 _sb.AppendLine();
             }
         }
@@ -285,24 +294,28 @@ internal class AliasCodeGenerator
             if (IsShiftOperator(opName))
             {
                 AppendMethodImplAttribute(indent);
-                _sb.AppendLine($"{indent}public static {_model.TypeName} operator {opSymbol}({_model.TypeName} left, int right) => new {_model.TypeName}(left._value {opSymbol} right);");
+                _sb.AppendLine(
+                    $"{indent}public static {_model.TypeName} operator {opSymbol}({_model.TypeName} left, int right) => new {_model.TypeName}(left._value {opSymbol} right);");
                 _sb.AppendLine();
             }
             else
             {
                 // Alias op Alias
                 AppendMethodImplAttribute(indent);
-                _sb.AppendLine($"{indent}public static {_model.TypeName} operator {opSymbol}({_model.TypeName} left, {_model.TypeName} right) => new {_model.TypeName}(left._value {opSymbol} right._value);");
+                _sb.AppendLine(
+                    $"{indent}public static {_model.TypeName} operator {opSymbol}({_model.TypeName} left, {_model.TypeName} right) => new {_model.TypeName}(left._value {opSymbol} right._value);");
                 _sb.AppendLine();
 
                 // Alias op T
                 AppendMethodImplAttribute(indent);
-                _sb.AppendLine($"{indent}public static {_model.TypeName} operator {opSymbol}({_model.TypeName} left, {_model.AliasedTypeFullName} right) => new {_model.TypeName}(left._value {opSymbol} right);");
+                _sb.AppendLine(
+                    $"{indent}public static {_model.TypeName} operator {opSymbol}({_model.TypeName} left, {_model.AliasedTypeFullName} right) => new {_model.TypeName}(left._value {opSymbol} right);");
                 _sb.AppendLine();
 
                 // T op Alias
                 AppendMethodImplAttribute(indent);
-                _sb.AppendLine($"{indent}public static {_model.TypeName} operator {opSymbol}({_model.AliasedTypeFullName} left, {_model.TypeName} right) => new {_model.TypeName}(left {opSymbol} right._value);");
+                _sb.AppendLine(
+                    $"{indent}public static {_model.TypeName} operator {opSymbol}({_model.AliasedTypeFullName} left, {_model.TypeName} right) => new {_model.TypeName}(left {opSymbol} right._value);");
                 _sb.AppendLine();
             }
         }
@@ -326,7 +339,8 @@ internal class AliasCodeGenerator
 
             var expr = WrapIfAlias(op.ReturnIsAliasedType, $"{opSymbol}value._value");
             AppendMethodImplAttribute(indent);
-            _sb.AppendLine($"{indent}public static {returnTypeStr} operator {opSymbol}({_model.TypeName} value) => {expr};");
+            _sb.AppendLine(
+                $"{indent}public static {returnTypeStr} operator {opSymbol}({_model.TypeName} value) => {expr};");
             _sb.AppendLine();
         }
 
@@ -340,7 +354,8 @@ internal class AliasCodeGenerator
             if (opSymbol == null) continue;
 
             AppendMethodImplAttribute(indent);
-            _sb.AppendLine($"{indent}public static {_model.TypeName} operator {opSymbol}({_model.TypeName} value) => new {_model.TypeName}({opSymbol}value._value);");
+            _sb.AppendLine(
+                $"{indent}public static {_model.TypeName} operator {opSymbol}({_model.TypeName} value) => new {_model.TypeName}({opSymbol}value._value);");
             _sb.AppendLine();
         }
     }
@@ -384,7 +399,8 @@ internal class AliasCodeGenerator
             foreach (var op in ops)
             {
                 AppendMethodImplAttribute(indent);
-                _sb.AppendLine($"{indent}public static bool operator {op}({_model.TypeName} left, {_model.TypeName} right) => left._value {op} right._value;");
+                _sb.AppendLine(
+                    $"{indent}public static bool operator {op}({_model.TypeName} left, {_model.TypeName} right) => left._value {op} right._value;");
                 _sb.AppendLine();
             }
 
@@ -396,15 +412,17 @@ internal class AliasCodeGenerator
         {
             var isRefType = !_model.AliasedTypeIsValueType;
 
-            string CompareExpr(string op) => isRefType
-                ? $"(left._value is null ? (right._value is null ? 0 : -1) : left._value.CompareTo(right._value)) {op} 0"
-                : $"left._value.CompareTo(right._value) {op} 0";
+            string CompareExpr(string op) =>
+                isRefType
+                    ? $"(left._value is null ? (right._value is null ? 0 : -1) : left._value.CompareTo(right._value)) {op} 0"
+                    : $"left._value.CompareTo(right._value) {op} 0";
 
             string[] ops = ["<", ">", "<=", ">="];
             foreach (var op in ops)
             {
                 AppendMethodImplAttribute(indent);
-                _sb.AppendLine($"{indent}public static bool operator {op}({_model.TypeName} left, {_model.TypeName} right) => {CompareExpr(op)};");
+                _sb.AppendLine(
+                    $"{indent}public static bool operator {op}({_model.TypeName} left, {_model.TypeName} right) => {CompareExpr(op)};");
                 _sb.AppendLine();
             }
         }
@@ -436,39 +454,46 @@ internal class AliasCodeGenerator
 
             // Object.Equals override
             _sb.AppendLine($"{indent}/// <inheritdoc/>");
-            _sb.AppendLine($"{indent}public override bool Equals(object? obj) => obj is {_model.TypeName} other && Equals(other);");
+            _sb.AppendLine(
+                $"{indent}public override bool Equals(object? obj) => obj is {_model.TypeName} other && Equals(other);");
             _sb.AppendLine();
 
             if (_model.IsClass)
             {
                 // Class types need null-safe equality operators
                 AppendMethodImplAttribute(indent);
-                _sb.AppendLine($"{indent}public static bool operator ==({_model.TypeName}? left, {_model.TypeName}? right) => ReferenceEquals(left, right) || (left is not null && left.Equals(right));");
+                _sb.AppendLine(
+                    $"{indent}public static bool operator ==({_model.TypeName}? left, {_model.TypeName}? right) => ReferenceEquals(left, right) || (left is not null && left.Equals(right));");
                 _sb.AppendLine();
 
                 AppendMethodImplAttribute(indent);
-                _sb.AppendLine($"{indent}public static bool operator !=({_model.TypeName}? left, {_model.TypeName}? right) => !(left == right);");
+                _sb.AppendLine(
+                    $"{indent}public static bool operator !=({_model.TypeName}? left, {_model.TypeName}? right) => !(left == right);");
                 _sb.AppendLine();
             }
             else if (_model.HasNativeEqualityOperator)
             {
                 AppendMethodImplAttribute(indent);
-                _sb.AppendLine($"{indent}public static bool operator ==({_model.TypeName} left, {_model.TypeName} right) => left._value == right._value;");
+                _sb.AppendLine(
+                    $"{indent}public static bool operator ==({_model.TypeName} left, {_model.TypeName} right) => left._value == right._value;");
                 _sb.AppendLine();
 
                 AppendMethodImplAttribute(indent);
-                _sb.AppendLine($"{indent}public static bool operator !=({_model.TypeName} left, {_model.TypeName} right) => left._value != right._value;");
+                _sb.AppendLine(
+                    $"{indent}public static bool operator !=({_model.TypeName} left, {_model.TypeName} right) => left._value != right._value;");
                 _sb.AppendLine();
             }
             else
             {
                 // Fallback: route through Equals
                 AppendMethodImplAttribute(indent);
-                _sb.AppendLine($"{indent}public static bool operator ==({_model.TypeName} left, {_model.TypeName} right) => left.Equals(right);");
+                _sb.AppendLine(
+                    $"{indent}public static bool operator ==({_model.TypeName} left, {_model.TypeName} right) => left.Equals(right);");
                 _sb.AppendLine();
 
                 AppendMethodImplAttribute(indent);
-                _sb.AppendLine($"{indent}public static bool operator !=({_model.TypeName} left, {_model.TypeName} right) => !left.Equals(right);");
+                _sb.AppendLine(
+                    $"{indent}public static bool operator !=({_model.TypeName} left, {_model.TypeName} right) => !left.Equals(right);");
                 _sb.AppendLine();
             }
         }
@@ -513,7 +538,8 @@ internal class AliasCodeGenerator
 
             if (member.IsProperty)
             {
-                _sb.AppendLine($"{indent}/// <summary>Forwards {_model.AliasedTypeMinimalName}.{member.Name}.</summary>");
+                _sb.AppendLine(
+                    $"{indent}/// <summary>Forwards {_model.AliasedTypeMinimalName}.{member.Name}.</summary>");
                 _sb.AppendLine($"{indent}public static {returnTypeStr} {member.Name}");
                 _sb.AppendLine($"{indent}{{");
                 AppendMethodImplAttribute($"{indent}    ");
@@ -523,7 +549,8 @@ internal class AliasCodeGenerator
             }
             else if (member.IsReadonlyField)
             {
-                _sb.AppendLine($"{indent}/// <summary>Forwards {_model.AliasedTypeMinimalName}.{member.Name}.</summary>");
+                _sb.AppendLine(
+                    $"{indent}/// <summary>Forwards {_model.AliasedTypeMinimalName}.{member.Name}.</summary>");
                 _sb.AppendLine($"{indent}public static {returnTypeStr} {member.Name} => {valueExpr};");
                 _sb.AppendLine();
             }
@@ -537,7 +564,8 @@ internal class AliasCodeGenerator
     {
         var indent = GetMemberIndent();
 
-        if (_model.InstanceFields.Length == 0 && _model.InstanceProperties.Length == 0 && _model.InstanceMethods.Length == 0)
+        if (_model.InstanceFields.Length == 0 && _model.InstanceProperties.Length == 0
+                                              && _model.InstanceMethods.Length == 0)
             return;
 
         _sb.AppendLine($"{indent}#region Instance Members");
@@ -663,7 +691,8 @@ internal class AliasCodeGenerator
         if (_model.ImplementsIFormattable)
         {
             _sb.AppendLine($"{indent}/// <inheritdoc/>");
-            _sb.AppendLine($"{indent}public string ToString(string? format, IFormatProvider? formatProvider) => _value.ToString(format, formatProvider);");
+            _sb.AppendLine(
+                $"{indent}public string ToString(string? format, IFormatProvider? formatProvider) => _value.ToString(format, formatProvider);");
             _sb.AppendLine();
         }
     }
@@ -687,22 +716,25 @@ internal class AliasCodeGenerator
 
         _sb.AppendLine($"{indent}/// <summary>Forwards {_model.AliasedTypeMinimalName} constructor.</summary>");
         AppendMethodImplAttribute(indent);
-        if (_model.IncludeConstraints)
+        if (_model.ConstraintModel.UseConstraints)
         {
             const string valueName = "newValue";
             _sb.AppendLine($"{indent}public {_model.TypeName}({parameters})");
             _sb.Append(indent).Append('{').AppendLine();
-            _sb.Append(indent).Append(SingleIndent).AppendLine($"var {valueName} = new {_model.AliasedTypeFullName}({arguments});");
-            
+            _sb.Append(indent).Append(SingleIndent)
+                .AppendLine($"var {valueName} = new {_model.AliasedTypeFullName}({arguments});");
+
             AppendConstraintChecker(SingleIndent, valueName);
-            _sb.Append(SingleIndent).Append(SingleIndent).Append(SingleIndent).AppendLine($"_value = {valueName};"); 
-            
+            _sb.Append(SingleIndent).Append(SingleIndent).Append(SingleIndent).AppendLine($"_value = {valueName};");
+
             _sb.Append(indent).Append('}').AppendLine();
         }
         else
-        { 
-            _sb.AppendLine($"{indent}public {_model.TypeName}({parameters}) => _value = new {_model.AliasedTypeFullName}({arguments});");
+        {
+            _sb.AppendLine(
+                $"{indent}public {_model.TypeName}({parameters}) => _value = new {_model.AliasedTypeFullName}({arguments});");
         }
+
         _sb.AppendLine();
     }
 
@@ -727,21 +759,23 @@ internal class AliasCodeGenerator
 
     private void AppendConstraintChecker(string indent, string valueName)
     {
-        if (!_model.validValidationMethod) return;
-        
-        if (_model.DebugOnlyConstraints)
+        if (!_model.ConstraintModel.Valid) return;
+
+        if (!_model.ConstraintModel.InRelease)
             _sb.AppendLine("#if DEBUG");
-        
+
         _sb.Append(indent).Append(indent).Append(indent)
-            .AppendLine($"if (!IsValid({valueName}))");
+            .AppendLine($"if (!{_model.ConstraintModel.ValidationSymbolName}({valueName}))");
         _sb.Append(indent).Append(indent).Append(indent).Append(indent)
-            .AppendLine($"throw new InvalidOperationException($\"Failed validation check when trying to create '{_model.TypeName}' with '{_model.AliasedTypeMinimalName}' value: {{{valueName}}}\");"); // we heard you like interpolation
-        
-        
-        if (_model.DebugOnlyConstraints)
+            .AppendLine(
+                $"throw new InvalidOperationException($\"Failed validation check when trying to create '{_model.TypeName}' with '{_model.AliasedTypeMinimalName}' value: {{{valueName}}}\");"); // we heard you like interpolation
+
+        if (!_model.ConstraintModel.InRelease)
             _sb.AppendLine("#endif");
+        else
+            _sb.AppendLine();
     }
-    
+
     private static string FormatConstructorParameters(ConstructorInfo ctor)
     {
         return string.Join(", ", ctor.Parameters.Array.Select(p =>
@@ -779,7 +813,8 @@ internal class AliasCodeGenerator
         }));
     }
 
-    private string GetMemberIndent() => string.IsNullOrEmpty(_model.Namespace) ? SingleIndent : $"{SingleIndent}{SingleIndent}";
+    private string GetMemberIndent() =>
+        string.IsNullOrEmpty(_model.Namespace) ? SingleIndent : $"{SingleIndent}{SingleIndent}";
 
     private static string? GetOperatorSymbol(string operatorName)
     {

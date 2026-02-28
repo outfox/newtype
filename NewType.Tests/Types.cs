@@ -8,10 +8,11 @@ public readonly partial struct Position;
 [newtype<Vector3>]
 public readonly partial struct Velocity;
 
-[newtype<Vector2>(ConstraintOptions = NewtypeConstraintOptions.ReleaseEnabled)]
+[newtype<Vector2>]
 public readonly partial struct Direction
 {
-    private static bool IsValid(Vector2 direction)
+    [newtypeValidation]
+    private static bool IsNormalized(Vector2 direction)
     {
         // enforce normalized
         const float epsilon = 0.0001f;

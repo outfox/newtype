@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Immutable;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.Text;
 
 namespace newtype.generator;
 
@@ -16,10 +17,10 @@ internal record AliasModel(
     bool IsReadonly,
     bool IsClass,
     bool IsRecord,
-    
+
     // Location for messages
-    Location? Location,
-    
+    LocationInfo? LocationInfo,
+
     // Aliased type
     string AliasedTypeFullName,
     string AliasedTypeMinimalName,
@@ -43,10 +44,7 @@ internal record AliasModel(
     bool SuppressImplicitUnwrap,
     bool SuppressConstructorForwarding,
     int MethodImplValue,
-    
-    bool IncludeConstraints,
-    bool DebugOnlyConstraints,
-    bool validValidationMethod,
+    ConstraintModel ConstraintModel,
 
     // Members
     EquatableArray<BinaryOperatorInfo> BinaryOperators,
@@ -56,12 +54,9 @@ internal record AliasModel(
     EquatableArray<InstancePropertyInfo> InstanceProperties,
     EquatableArray<InstanceMethodInfo> InstanceMethods,
     EquatableArray<ConstructorInfo> ForwardedConstructors
-)
-{ 
-    public const string ConstraintValidationMethodSymbol = "IsValid";
-};
+);
 
-internal readonly record struct ExtractedOptions(int Options, int ConstraintOptions, int MethodImpl);
+internal readonly record struct ExtractedOptions(int Options, int MethodImpl);
 
 internal readonly record struct BinaryOperatorInfo(
     string Name,
@@ -127,3 +122,12 @@ internal readonly record struct ConstructorParameterInfo(
     bool IsParams,
     string? DefaultValueLiteral
 ) : IEquatable<ConstructorParameterInfo>;
+
+internal readonly record struct LocationInfo(
+    string FilePath,
+    TextSpan TextSpan,
+    LinePositionSpan LineSpan
+) : IEquatable<LocationInfo>
+{
+    public Location ToLocation() => Location.Create(FilePath, TextSpan, LineSpan);
+}
