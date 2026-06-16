@@ -289,6 +289,67 @@ public class PrimitiveTests
         Assert.Equal("False", b.ToString());
     }
 
+    // --- Amount (decimal) — issue #5 regression: ++/-- must not assign the readonly field ---
+
+    [Fact]
+    public void Amount_ImplicitConversion_RoundTrip()
+    {
+        Amount a = 5.5m;
+        decimal raw = a;
+        Assert.Equal(5.5m, raw);
+    }
+
+    [Fact]
+    public void Amount_Increment()
+    {
+        Amount a = new(5m);
+        a++;
+        Assert.Equal(6m, a.Value);
+        ++a;
+        Assert.Equal(7m, a.Value);
+    }
+
+    [Fact]
+    public void Amount_Decrement()
+    {
+        Amount a = new(5m);
+        a--;
+        Assert.Equal(4m, a.Value);
+        --a;
+        Assert.Equal(3m, a.Value);
+    }
+
+    [Fact]
+    public void Amount_Arithmetic()
+    {
+        Amount a = 10m;
+        Amount b = 3m;
+
+        Assert.Equal(13m, (decimal) (a + b));
+        Assert.Equal(7m, (decimal) (a - b));
+        Assert.Equal(30m, (decimal) (a * b));
+    }
+
+    [Fact]
+    public void Amount_UnaryOperators()
+    {
+        Amount a = 5m;
+        Assert.Equal(-5m, (decimal) (-a));
+        Assert.Equal(5m, (decimal) (+a));
+    }
+
+    [Fact]
+    public void Amount_Comparison()
+    {
+        Amount low = 1m;
+        Amount high = 100m;
+
+        Assert.True(low < high);
+        Assert.True(high > low);
+        Assert.True(low <= high);
+        Assert.True(high >= low);
+    }
+
     // --- Ref / ECS patterns with primitives ---
 
     [Fact]

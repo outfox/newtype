@@ -181,4 +181,75 @@ public class GeneratorOutputTests
         Assert.Contains("private readonly int _value;", text);
         Assert.Contains("public TestId(int value)", text);
     }
+
+    [Fact]
+    public void Generates_Output_For_Decimal_Alias_WithoutReadonlyFieldError()
+    {
+        // Issue #5: decimal defines op_Increment/op_Decrement as real operators, so the generated
+        // ++/-- must increment a local copy rather than assign the readonly _value field (CS0191).
+        // RunGenerator asserts the output compiles without errors or warnings.
+        const string source = """
+            using newtype;
+
+            [newtype<decimal>]
+            public readonly partial struct Money;
+            """;
+
+        var result = GeneratorTestHelper.RunGenerator(source);
+
+        var text = result.Results[0].GeneratedSources
+            .Single(s => s.HintName.EndsWith("Money.g.cs"))
+            .SourceText.ToString();
+
+        Assert.Contains("operator ++(Money value)", text);
+        Assert.Contains("operator --(Money value)", text);
+        Assert.Contains("var v = value._value;", text);
+        // The buggy form that mutated the readonly field must not appear.
+        Assert.DoesNotContain("++value._value", text);
+        Assert.DoesNotContain("--value._value", text);
+    }
+
+    [Fact]
+    public void Generates_Serialization_Support_When_Opted_In()
+    {
+        // Issue #4
+        const string source = """
+            using newtype;
+
+            [newtype<string>(Options = NewtypeOptions.Serializable)]
+            public readonly partial struct ContractId;
+            """;
+
+        var result = GeneratorTestHelper.RunGenerator(source);
+
+        var text = result.Results[0].GeneratedSources
+            .Single(s => s.HintName.EndsWith("ContractId.g.cs"))
+            .SourceText.ToString();
+
+        Assert.Contains("[global::System.ComponentModel.TypeConverter(typeof(ContractId.NewtypeTypeConverter))]", text);
+        Assert.Contains("[global::System.Text.Json.Serialization.JsonConverter(typeof(ContractId.NewtypeJsonConverter))]", text);
+        Assert.Contains("public sealed class NewtypeTypeConverter", text);
+        Assert.Contains("public sealed class NewtypeJsonConverter", text);
+    }
+
+    [Fact]
+    public void No_Serialization_Support_By_Default()
+    {
+        const string source = """
+            using newtype;
+
+            [newtype<string>]
+            public readonly partial struct PlainId;
+            """;
+
+        var result = GeneratorTestHelper.RunGenerator(source);
+
+        var text = result.Results[0].GeneratedSources
+            .Single(s => s.HintName.EndsWith("PlainId.g.cs"))
+            .SourceText.ToString();
+
+        Assert.DoesNotContain("NewtypeJsonConverter", text);
+        Assert.DoesNotContain("NewtypeTypeConverter", text);
+        Assert.DoesNotContain("System.Text.Json", text);
+    }
 }

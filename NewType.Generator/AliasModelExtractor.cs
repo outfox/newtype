@@ -16,6 +16,7 @@ internal static class AliasModelExtractor
     private const int OptionsNoImplicitWrap = 1;
     private const int OptionsNoImplicitUnwrap = 2;
     private const int OptionsNoConstructorForwarding = 4;
+    private const int OptionsSerializable = 8;
 
     public static AliasModel? Extract(
         GeneratorAttributeSyntaxContext context,
@@ -76,6 +77,7 @@ internal static class AliasModelExtractor
             SuppressImplicitWrap: (options & OptionsNoImplicitWrap) != 0,
             SuppressImplicitUnwrap: (options & OptionsNoImplicitUnwrap) != 0,
             SuppressConstructorForwarding: (options & OptionsNoConstructorForwarding) != 0,
+            EmitSerialization: (options & OptionsSerializable) != 0,
             MethodImplValue: methodImpl,
             BinaryOperators: binaryOperators,
             UnaryOperators: unaryOperators,

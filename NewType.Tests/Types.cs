@@ -41,6 +41,17 @@ public readonly partial struct Price;
 [newtype<Rgb>]
 public readonly partial struct Tint;
 
+// decimal — exercises forwarding of user-defined op_Increment/op_Decrement (issue #5)
+[newtype<decimal>]
+public readonly partial struct Amount;
+
+// serialization opt-in — System.Text.Json + TypeConverter (issue #4)
+[newtype<string>(Options = NewtypeOptions.Serializable)]
+public readonly partial struct SerialId;
+
+[newtype<int>(Options = NewtypeOptions.Serializable)]
+public readonly partial struct SerialCount;
+
 // record struct variants
 [newtype<int>]
 public partial record struct Score;
