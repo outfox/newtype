@@ -39,7 +39,7 @@ public class ReadmeExampleTests
         var result = GeneratorTestHelper.RunGenerator(ReadmeSource);
 
         // Attribute + 3 aliases
-        Assert.Equal(4, result.GeneratedTrees.Length);
+        Assert.Equal(5, result.GeneratedTrees.Length);
 
         var sources = result.Results[0].GeneratedSources;
         Assert.Single(sources.Where(s => s.HintName.EndsWith("TableId.g.cs")));

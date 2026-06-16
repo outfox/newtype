@@ -20,7 +20,7 @@ public class GeneratorOutputTests
         var result = GeneratorTestHelper.RunGenerator(source);
 
         // Attribute source + alias source
-        Assert.Equal(2, result.GeneratedTrees.Length);
+        Assert.Equal(3, result.GeneratedTrees.Length);
 
         var generatedSources = result.Results[0].GeneratedSources;
 
@@ -47,7 +47,7 @@ public class GeneratorOutputTests
 
         var result = GeneratorTestHelper.RunGenerator(source);
 
-        Assert.Equal(2, result.GeneratedTrees.Length);
+        Assert.Equal(3, result.GeneratedTrees.Length);
 
         var generatedSources = result.Results[0].GeneratedSources;
 
@@ -81,7 +81,7 @@ public class GeneratorOutputTests
 
         var result = GeneratorTestHelper.RunGenerator(source);
 
-        Assert.Equal(2, result.GeneratedTrees.Length);
+        Assert.Equal(3, result.GeneratedTrees.Length);
 
         var generatedSources = result.Results[0].GeneratedSources;
 
@@ -151,7 +151,7 @@ public class GeneratorOutputTests
         var result = GeneratorTestHelper.RunGenerator(source);
 
         // Attribute + 2 aliases
-        Assert.Equal(3, result.GeneratedTrees.Length);
+        Assert.Equal(4, result.GeneratedTrees.Length);
 
         var generatedSources = result.Results[0].GeneratedSources;
 
@@ -171,7 +171,7 @@ public class GeneratorOutputTests
 
         var result = GeneratorTestHelper.RunGenerator(source);
 
-        Assert.Equal(2, result.GeneratedTrees.Length);
+        Assert.Equal(3, result.GeneratedTrees.Length);
 
         var generatedSources = result.Results[0].GeneratedSources;
 
