@@ -1,9 +1,9 @@
-﻿; Unshipped analyzer release
+; Unshipped analyzer release
 ; https://github.com/dotnet/roslyn-analyzers/blob/main/src/Microsoft.CodeAnalysis.Analyzers/ReleaseTrackingAnalyzers.Help.md
 
 ### New Rules
 
-| Rule ID    | Category  | Severity | Notes          |
-|------------|-----------|----------|----------------|
-| NEWTYPE001 | `Unknown` | Error    | AliasGenerator |
-| NEWTYPE002 | `Unknown` | Error    | AliasGenerator |
+Rule ID | Category | Severity | Notes
+--------|----------|----------|-------
+NEWTYPE001 | Unknown | Error | AliasGenerator
+NEWTYPE002 | Unknown | Error | AliasGenerator

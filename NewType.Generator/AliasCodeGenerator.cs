@@ -751,28 +751,49 @@ internal class AliasCodeGenerator
         _sb.AppendLine($"{indent}#region Serialization");
         _sb.AppendLine();
 
+        // When T is string, typeof(T) == typeof(string); emit only the string arm to avoid
+        // duplicate conditions and unreachable branches.
+        var aliasedIsString = _model.AliasedTypeSpecialType == SpecialType.System_String;
+
         // TypeConverter — covers Newtonsoft.Json, ASP.NET model binding, configuration binding, etc.
         _sb.AppendLine($"{indent}/// <summary>Converts {name} to and from {minimal} and string.</summary>");
         _sb.AppendLine($"{indent}public sealed class NewtypeTypeConverter : global::System.ComponentModel.TypeConverter");
         _sb.AppendLine($"{indent}{{");
+        if (!aliasedIsString)
+        {
+            // Resolve the underlying type's converter once — TypeDescriptor lookups aren't free.
+            _sb.AppendLine($"{inner}private static readonly global::System.ComponentModel.TypeConverter _inner = global::System.ComponentModel.TypeDescriptor.GetConverter(typeof({t}));");
+            _sb.AppendLine();
+        }
         _sb.AppendLine($"{inner}/// <inheritdoc/>");
         _sb.AppendLine($"{inner}public override bool CanConvertFrom(global::System.ComponentModel.ITypeDescriptorContext? context, global::System.Type sourceType)");
-        _sb.AppendLine($"{body}=> sourceType == typeof(string) || sourceType == typeof({t}) || base.CanConvertFrom(context, sourceType);");
+        _sb.AppendLine(aliasedIsString
+            ? $"{body}=> sourceType == typeof(string) || base.CanConvertFrom(context, sourceType);"
+            : $"{body}=> sourceType == typeof(string) || sourceType == typeof({t}) || base.CanConvertFrom(context, sourceType);");
         _sb.AppendLine();
         _sb.AppendLine($"{inner}/// <inheritdoc/>");
         _sb.AppendLine($"{inner}public override bool CanConvertTo(global::System.ComponentModel.ITypeDescriptorContext? context, global::System.Type? destinationType)");
-        _sb.AppendLine($"{body}=> destinationType == typeof(string) || destinationType == typeof({t}) || base.CanConvertTo(context, destinationType);");
+        _sb.AppendLine(aliasedIsString
+            ? $"{body}=> destinationType == typeof(string) || base.CanConvertTo(context, destinationType);"
+            : $"{body}=> destinationType == typeof(string) || destinationType == typeof({t}) || base.CanConvertTo(context, destinationType);");
         _sb.AppendLine();
         _sb.AppendLine($"{inner}/// <inheritdoc/>");
         _sb.AppendLine($"{inner}public override object? ConvertFrom(global::System.ComponentModel.ITypeDescriptorContext? context, global::System.Globalization.CultureInfo? culture, object value)");
         _sb.AppendLine($"{inner}{{");
-        _sb.AppendLine($"{body}if (value is {t} unwrapped) return new {name}(unwrapped);");
-        _sb.AppendLine($"{body}if (value is string text)");
-        _sb.AppendLine($"{body}{{");
-        _sb.AppendLine($"{body}    var converted = global::System.ComponentModel.TypeDescriptor.GetConverter(typeof({t})).ConvertFromString(context, culture, text);");
-        _sb.AppendLine($"{body}    if (converted is null) return null;");
-        _sb.AppendLine($"{body}    return new {name}(({t})converted);");
-        _sb.AppendLine($"{body}}}");
+        if (aliasedIsString)
+        {
+            _sb.AppendLine($"{body}if (value is string unwrapped) return new {name}(unwrapped);");
+        }
+        else
+        {
+            _sb.AppendLine($"{body}if (value is {t} unwrapped) return new {name}(unwrapped);");
+            _sb.AppendLine($"{body}if (value is string text)");
+            _sb.AppendLine($"{body}{{");
+            _sb.AppendLine($"{body}    var converted = _inner.ConvertFromString(context, culture, text);");
+            _sb.AppendLine($"{body}    if (converted is null) return null;");
+            _sb.AppendLine($"{body}    return new {name}(({t})converted);");
+            _sb.AppendLine($"{body}}}");
+        }
         _sb.AppendLine($"{body}return base.ConvertFrom(context, culture, value);");
         _sb.AppendLine($"{inner}}}");
         _sb.AppendLine();
@@ -781,8 +802,15 @@ internal class AliasCodeGenerator
         _sb.AppendLine($"{inner}{{");
         _sb.AppendLine($"{body}if (value is {name} wrapped)");
         _sb.AppendLine($"{body}{{");
-        _sb.AppendLine($"{body}    if (destinationType == typeof({t})) return wrapped._value;");
-        _sb.AppendLine($"{body}    if (destinationType == typeof(string)) return global::System.ComponentModel.TypeDescriptor.GetConverter(typeof({t})).ConvertToString(context, culture, wrapped._value);");
+        if (aliasedIsString)
+        {
+            _sb.AppendLine($"{body}    if (destinationType == typeof(string)) return wrapped._value;");
+        }
+        else
+        {
+            _sb.AppendLine($"{body}    if (destinationType == typeof({t})) return wrapped._value;");
+            _sb.AppendLine($"{body}    if (destinationType == typeof(string)) return _inner.ConvertToString(context, culture, wrapped._value);");
+        }
         _sb.AppendLine($"{body}}}");
         _sb.AppendLine($"{body}return base.ConvertTo(context, culture, value, destinationType);");
         _sb.AppendLine($"{inner}}}");
