@@ -99,8 +99,10 @@ public class SerializationTests
     [Fact]
     public void NonSerializable_Newtype_HasNoCustomConverter()
     {
-        // Name is a plain [newtype<string>] without the Serializable flag.
+        // Name is a plain [newtype<string>] without the Serializable flag, so no [TypeConverter]
+        // is generated and TypeDescriptor falls back to the default base converter. Any generated
+        // converter would derive from TypeConverter, so this exact-type check enforces the gate.
         var converter = TypeDescriptor.GetConverter(typeof(Name));
-        Assert.IsNotType<SerialId.NewtypeTypeConverter>(converter);
+        Assert.IsType<TypeConverter>(converter);
     }
 }
