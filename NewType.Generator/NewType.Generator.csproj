@@ -10,7 +10,12 @@
 
         <!-- NuGet package properties -->
         <PackageId>newtype</PackageId>
-        <Version>0.6.2</Version>
+        <Version>0.6.3</Version>
+
+        <!-- Emit a portable PDB and ship a symbol package (.snupkg) alongside the .nupkg. -->
+        <DebugType>portable</DebugType>
+        <IncludeSymbols>true</IncludeSymbols>
+        <SymbolPackageFormat>snupkg</SymbolPackageFormat>
         <Authors>Moritz Voss</Authors>
         <Copyright>Copyright (c) 2026 Moritz Voss</Copyright>
         <Description>Source generator for creating distinct type aliases with full operator forwarding</Description>
@@ -38,9 +43,14 @@
         <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.8.0" PrivateAssets="all"/>
     </ItemGroup>
 
-    <!-- Pack the generator into the analyzer directory -->
+    <!-- Pack the generator into the analyzer directory. The .pdb must be packed explicitly: without it,
+         pack fails with NU5017 ("no dependencies nor content") for the symbol package, because
+         IncludeBuildOutput is false and the manually-packed DLL contributes no symbols to the .snupkg.
+         The .pdb ships next to the analyzer DLL in the main .nupkg (for debugging the generator) and is
+         also mirrored into the .snupkg for nuget.org's symbol server. -->
     <ItemGroup>
         <None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false"/>
+        <None Include="$(OutputPath)\$(AssemblyName).pdb" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false"/>
     </ItemGroup>
 
     <!-- Include README and LICENSE in the package -->
