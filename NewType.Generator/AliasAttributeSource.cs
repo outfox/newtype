@@ -37,7 +37,7 @@ internal static class NewtypeAttributeSource
                                          /// <summary>Suppress implicit conversions and constructor forwarding.</summary>
                                          Opaque                  = NoImplicitConversions | NoConstructorForwarding,
                                      }
-
+                                
                                      /// <summary>
                                      /// Marks a partial type as a type alias for the specified type.
                                      /// The source generator will generate implicit conversions, operator forwarding,
@@ -56,7 +56,7 @@ internal static class NewtypeAttributeSource
 
                                          /// <summary>Controls which features the generator emits.</summary>
                                          public NewtypeOptions Options { get; set; }
-
+                                         
                                          /// <summary>
                                          /// Overrides the MethodImplOptions applied to generated members.
                                          /// Default is <see cref="global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining"/>.

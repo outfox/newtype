@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Immutable;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.Text;
 
 namespace newtype.generator;
 
@@ -8,7 +9,7 @@ namespace newtype.generator;
 /// Fully-extracted, equatable model representing a newtype alias.
 /// Contains only strings, bools, plain enums, and EquatableArrays — no Roslyn symbols.
 /// </summary>
-internal readonly record struct AliasModel(
+internal record AliasModel(
     // Type being declared
     string TypeName,
     string Namespace,
@@ -16,7 +17,9 @@ internal readonly record struct AliasModel(
     bool IsReadonly,
     bool IsClass,
     bool IsRecord,
-    bool IsRecordStruct,
+
+    // Location for messages
+    LocationInfo? LocationInfo,
 
     // Aliased type
     string AliasedTypeFullName,
@@ -42,6 +45,7 @@ internal readonly record struct AliasModel(
     bool SuppressConstructorForwarding,
     bool EmitSerialization,
     int MethodImplValue,
+    ConstraintModel ConstraintModel,
 
     // Members
     EquatableArray<BinaryOperatorInfo> BinaryOperators,
@@ -52,6 +56,8 @@ internal readonly record struct AliasModel(
     EquatableArray<InstanceMethodInfo> InstanceMethods,
     EquatableArray<ConstructorInfo> ForwardedConstructors
 );
+
+internal readonly record struct ExtractedOptions(int Options, int MethodImpl);
 
 internal readonly record struct BinaryOperatorInfo(
     string Name,
@@ -117,3 +123,12 @@ internal readonly record struct ConstructorParameterInfo(
     bool IsParams,
     string? DefaultValueLiteral
 ) : IEquatable<ConstructorParameterInfo>;
+
+internal readonly record struct LocationInfo(
+    string FilePath,
+    TextSpan TextSpan,
+    LinePositionSpan LineSpan
+) : IEquatable<LocationInfo>
+{
+    public Location ToLocation() => Location.Create(FilePath, TextSpan, LineSpan);
+}

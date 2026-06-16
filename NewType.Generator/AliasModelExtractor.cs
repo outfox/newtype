@@ -3,6 +3,7 @@ using System.Globalization;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.CodeAnalysis.Text;
 
 namespace newtype.generator;
 
@@ -18,25 +19,23 @@ internal static class AliasModelExtractor
     private const int OptionsNoConstructorForwarding = 4;
     private const int OptionsSerializable = 8;
 
-    public static AliasModel? Extract(
+   public static AliasModel? Extract(
         GeneratorAttributeSyntaxContext context,
         ITypeSymbol aliasedType,
-        int options,
-        int methodImpl)
+        ExtractedOptions allOptions)
     {
         var typeDecl = (TypeDeclarationSyntax)context.TargetNode;
         var typeSymbol = (INamedTypeSymbol)context.TargetSymbol;
 
         var typeName = typeSymbol.Name;
         var ns = typeSymbol.ContainingNamespace;
-        var namespaceName = ns is {IsGlobalNamespace: false} ? ns.ToDisplayString() : "";
+        var namespaceName = ns is { IsGlobalNamespace: false } ? ns.ToDisplayString() : "";
 
         var isReadonly = typeDecl.Modifiers.Any(SyntaxKind.ReadOnlyKeyword);
         var isClass = typeDecl is ClassDeclarationSyntax
                       || (typeDecl is RecordDeclarationSyntax rds
                           && !rds.ClassOrStructKeyword.IsKind(SyntaxKind.StructKeyword));
         var isRecord = typeDecl is RecordDeclarationSyntax;
-        var isRecordStruct = isRecord && !isClass;
 
         var aliasedTypeFullName = aliasedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
         var aliasedTypeMinimalName = aliasedType.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat);
@@ -57,6 +56,8 @@ internal static class AliasModelExtractor
 
         var typeDisplayString = typeSymbol.ToDisplayString();
 
+        var constraintModel = ExtractValidationMethod(typeSymbol, aliasedType);
+
         return new AliasModel(
             TypeName: typeName,
             Namespace: namespaceName,
@@ -64,7 +65,7 @@ internal static class AliasModelExtractor
             IsReadonly: isReadonly,
             IsClass: isClass,
             IsRecord: isRecord,
-            IsRecordStruct: isRecordStruct,
+            LocationInfo: ToLocationStruct(typeSymbol.Locations.FirstOrDefault()),
             AliasedTypeFullName: aliasedTypeFullName,
             AliasedTypeMinimalName: aliasedTypeMinimalName,
             AliasedTypeSpecialType: aliasedType.SpecialType,
@@ -74,11 +75,12 @@ internal static class AliasModelExtractor
             HasNativeEqualityOperator: hasNativeEquality,
             TypeDisplayString: typeDisplayString,
             HasStaticMemberCandidates: hasStaticMemberCandidates,
-            SuppressImplicitWrap: (options & OptionsNoImplicitWrap) != 0,
-            SuppressImplicitUnwrap: (options & OptionsNoImplicitUnwrap) != 0,
-            SuppressConstructorForwarding: (options & OptionsNoConstructorForwarding) != 0,
-            EmitSerialization: (options & OptionsSerializable) != 0,
-            MethodImplValue: methodImpl,
+            SuppressImplicitWrap: (allOptions.Options & OptionsNoImplicitWrap) != 0,
+            SuppressImplicitUnwrap: (allOptions.Options & OptionsNoImplicitUnwrap) != 0,
+            SuppressConstructorForwarding: (allOptions.Options & OptionsNoConstructorForwarding) != 0,
+            EmitSerialization: (allOptions.Options & OptionsSerializable) != 0,
+            MethodImplValue: allOptions.MethodImpl,
+            ConstraintModel: constraintModel,
             BinaryOperators: binaryOperators,
             UnaryOperators: unaryOperators,
             StaticMembers: staticMembers,
@@ -357,6 +359,54 @@ internal static class AliasModelExtractor
         }));
     }
 
+    private static ConstraintModel ExtractValidationMethod(ITypeSymbol targetType,
+        ITypeSymbol aliasedType)
+    {
+        IMethodSymbol? validationMethod = null;
+        Location? location = null;
+        bool invalid = false;
+        bool multiple = false;
+        bool inRelease = false;
+
+        foreach (var method in targetType.GetMembers().OfType<IMethodSymbol>())
+        {
+            foreach (var attributeData in method.GetAttributes().Where(x => x is not null))
+            {
+                if (attributeData.AttributeClass!.Name == ConstraintAttributeSource.AttributeName)
+                {
+                    foreach (var arg in attributeData.NamedArguments)
+                    {
+                        if (arg.Key == "IncludeInRelease")
+                        {
+                            inRelease = (bool)arg.Value.Value!;
+                        }
+                    }
+                    
+                    // doesn't have to be static
+                    var methodValid = method.ReturnType.SpecialType == SpecialType.System_Boolean &&
+                                      method.Parameters.Length == 1 &&
+                                      SymbolEqualityComparer.Default.Equals(
+                                          method.Parameters[0].Type,
+                                          aliasedType);
+
+                    invalid |= !methodValid;
+
+                    if (validationMethod == null)
+                    {
+                        validationMethod = method;
+                        location = method.Locations[0];
+                    }
+                    else
+                    {
+                        multiple = true;
+                    }
+                }
+            }
+        }
+
+        return new ConstraintModel(validationMethod?.Name, inRelease, !invalid, multiple, ToLocationStruct(location));
+    }
+
     private static string FormatDefaultValue(IParameterSymbol param)
     {
         var value = param.ExplicitDefaultValue;
@@ -418,4 +468,24 @@ internal static class AliasModelExtractor
 
         return type.AllInterfaces.Any(i => i.ToDisplayString() == interfaceFullName);
     }
+
+    private static LocationInfo? ToLocationStruct(Location? location) =>
+        location is not null && location.IsInSource ?  
+            new LocationInfo(
+                location.SourceTree.FilePath,
+                location.SourceSpan, 
+                new LinePositionSpan(
+                    location.GetLineSpan().StartLinePosition, 
+                    location.GetLineSpan().EndLinePosition))
+            :null;
 }
+
+internal record ConstraintModel(
+    string? ValidationSymbolName,
+    bool InRelease,
+    bool Valid,
+    bool Multiple,
+    LocationInfo? LocationInfo)
+{
+    public bool UseConstraints => ValidationSymbolName is not null && Valid && !Multiple;
+};

@@ -49,5 +49,9 @@
         <None Include="icon.png" Pack="true" PackagePath="/"/>
         <None Include="NUGET.md" Pack="true" PackagePath="/"/>
     </ItemGroup>
+    <ItemGroup>
+      <AdditionalFiles Include="AnalyzerReleases.Shipped.md" />
+      <AdditionalFiles Include="AnalyzerReleases.Unshipped.md" />
+    </ItemGroup>
 
 </Project>
