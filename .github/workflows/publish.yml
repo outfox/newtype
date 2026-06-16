@@ -1,0 +1,67 @@
+name: Publish to NuGet
+
+# Manually triggered release pipeline using NuGet Trusted Publishing (OIDC) —
+# no long-lived API key is stored. The package version is taken from <Version>
+# in NewType.Generator/NewType.Generator.csproj.
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Pack only — build the package but do not push to NuGet"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  id-token: write # required to request the GitHub OIDC token for Trusted Publishing
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore
+        run: dotnet restore
+
+      # Gate the release on the test suite. Run in Debug: constraint-validation
+      # checks are emitted under `#if DEBUG`, so the `*_Throws` tests only exercise
+      # the generated guards in a Debug build (matches the CI workflow).
+      - name: Test
+        run: dotnet test -c Debug --no-restore --verbosity normal
+
+      - name: Pack
+        run: dotnet pack NewType.Generator/NewType.Generator.csproj -c Release --no-restore -o ${{ runner.temp }}/artifacts
+
+      - name: List package
+        run: ls -l ${{ runner.temp }}/artifacts
+
+      - name: Upload package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nuget-package
+          path: ${{ runner.temp }}/artifacts/*.nupkg
+
+      # Exchange the GitHub OIDC token for a short-lived NuGet API key via the
+      # Trusted Publishing policy configured on nuget.org. `NUGET_USER` is a repo
+      # variable holding the nuget.org account that owns the policy.
+      - name: NuGet login (Trusted Publishing)
+        if: ${{ !inputs.dry_run }}
+        id: nuget-login
+        uses: NuGet/login@v1
+        with:
+          user: ${{ vars.NUGET_USER }}
+
+      - name: Push to NuGet
+        if: ${{ !inputs.dry_run }}
+        run: >
+          dotnet nuget push "${{ runner.temp }}/artifacts/*.nupkg"
+          --api-key "${{ steps.nuget-login.outputs.NUGET_API_KEY }}"
+          --source https://api.nuget.org/v3/index.json
+          --skip-duplicate
