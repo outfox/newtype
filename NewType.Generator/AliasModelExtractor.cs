@@ -370,7 +370,7 @@ internal static class AliasModelExtractor
 
         foreach (var method in targetType.GetMembers().OfType<IMethodSymbol>())
         {
-            foreach (var attributeData in method.GetAttributes().Where(x => x is not null))
+            foreach (var attributeData in method.GetAttributes())
             {
                 if (attributeData.AttributeClass!.Name == ConstraintAttributeSource.AttributeName)
                 {
@@ -470,14 +470,12 @@ internal static class AliasModelExtractor
     }
 
     private static LocationInfo? ToLocationStruct(Location? location) =>
-        location is not null && location.IsInSource ?  
-            new LocationInfo(
+        location is not null && location.IsInSource
+            ? new LocationInfo(
                 location.SourceTree.FilePath,
-                location.SourceSpan, 
-                new LinePositionSpan(
-                    location.GetLineSpan().StartLinePosition, 
-                    location.GetLineSpan().EndLinePosition))
-            :null;
+                location.SourceSpan,
+                location.GetLineSpan().Span)
+            : null;
 }
 
 internal record ConstraintModel(
