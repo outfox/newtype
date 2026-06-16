@@ -107,8 +107,26 @@ public readonly partial struct RelaxedId;
 | `NoConstructorForwarding` | Suppress forwarded constructors from `T` |
 | `NoImplicitConversions` | `NoImplicitWrap \| NoImplicitUnwrap` |
 | `Opaque` | `NoImplicitConversions \| NoConstructorForwarding` |
+| `Serializable` | Generate `System.Text.Json` + `TypeConverter` serialization support |
 
 With any option, the primary constructor (`new Alias(T value)`) and `.Value` property are always available.
+
+## Serialization
+
+By default a newtype serializes like any struct — which usually isn't what you want. Opt in with `NewtypeOptions.Serializable` to make it serialize as its underlying value:
+
+```csharp
+[newtype<string>(Options = NewtypeOptions.Serializable)]
+public readonly partial struct ContractId;
+```
+
+```csharp
+JsonSerializer.Serialize(new ContractId("CTR-002"));   // "CTR-002"
+```
+
+This generates a `[JsonConverter]` (for `System.Text.Json`) and a `[TypeConverter]` (for `Newtonsoft.Json`, ASP.NET model binding, configuration binding, dictionary keys, etc.). Both delegate the underlying value to `T`'s own serializer, so any serializable `T` works.
+
+> `XmlSerializer` round-tripping is not supported for `readonly struct` newtypes — it populates instances in place, which an immutable struct forbids.
 
 ## Extending Your Types
 
@@ -132,6 +150,10 @@ public readonly partial struct Position
 ```
 
 Then inspect `obj/Debug/net10.0/GeneratedFiles/` after building.
+
+## Naming
+
+The attribute is intentionally lowercase `newtype<T>`: it mirrors the `newtype` namespace, the NuGet package id, and Haskell's `newtype` keyword. The class itself keeps the conventional `Attribute` suffix internally (`newtypeAttribute<T>`), so both `[newtype<T>]` and the `[newtype(typeof(T))]` fallback bind correctly.
 
 ## Requirements
 

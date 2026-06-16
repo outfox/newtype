@@ -30,6 +30,8 @@ internal static class NewtypeAttributeSource
                                          NoImplicitUnwrap        = 2,
                                          /// <summary>Suppress forwarding constructors from T.</summary>
                                          NoConstructorForwarding = 4,
+                                         /// <summary>Emit System.Text.Json and TypeConverter serialization support.</summary>
+                                         Serializable            = 8,
                                          /// <summary>Suppress both implicit conversions.</summary>
                                          NoImplicitConversions   = NoImplicitWrap | NoImplicitUnwrap,
                                          /// <summary>Suppress implicit conversions and constructor forwarding.</summary>

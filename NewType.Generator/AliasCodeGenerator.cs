@@ -44,6 +44,7 @@ internal class AliasCodeGenerator
         AppendToString();
         if (!_model.IsRecord)
             AppendGetHashCode();
+        AppendSerializationConverters();
 
         AppendTypeClose();
         AppendNamespaceClose();
@@ -118,6 +119,12 @@ internal class AliasCodeGenerator
             (true, false) => "class",
             (true, true) => "record class",
         };
+        if (_model.EmitSerialization)
+        {
+            _sb.AppendLine($"{indent}[global::System.ComponentModel.TypeConverter(typeof({_model.TypeName}.NewtypeTypeConverter))]");
+            _sb.AppendLine($"{indent}[global::System.Text.Json.Serialization.JsonConverter(typeof({_model.TypeName}.NewtypeJsonConverter))]");
+        }
+
         _sb.AppendLine($"{indent}{accessMod}{readonlyMod}partial {typeKeyword} {_model.TypeName} : {interfaceList}");
         _sb.AppendLine($"{indent}{{");
     }
@@ -304,6 +311,21 @@ internal class AliasCodeGenerator
             var returnTypeStr = op.ReturnIsAliasedType
                 ? _model.TypeName
                 : op.ReturnTypeFullName;
+
+            // ++ and -- mutate their operand; _value is readonly, so increment a local copy
+            // instead of the field directly (which would be CS0191). This path is reached for
+            // types that define op_Increment/op_Decrement as real operators (e.g. decimal).
+            if (op.Name is "op_Increment" or "op_Decrement")
+            {
+                AppendMethodImplAttribute(indent);
+                _sb.AppendLine($"{indent}public static {returnTypeStr} operator {opSymbol}({_model.TypeName} value)");
+                _sb.AppendLine($"{indent}{{");
+                _sb.AppendLine($"{indent}    var v = value._value;");
+                _sb.AppendLine($"{indent}    return {WrapIfAlias(op.ReturnIsAliasedType, $"{opSymbol}v")};");
+                _sb.AppendLine($"{indent}}}");
+                _sb.AppendLine();
+                continue;
+            }
 
             var expr = WrapIfAlias(op.ReturnIsAliasedType, $"{opSymbol}value._value");
             AppendMethodImplAttribute(indent);
@@ -658,6 +680,82 @@ internal class AliasCodeGenerator
         _sb.AppendLine($"{indent}/// <inheritdoc/>");
         AppendMethodImplAttribute(indent);
         _sb.AppendLine($"{indent}public override int GetHashCode() => {hashExpr};");
+        _sb.AppendLine();
+    }
+
+    /// <summary>
+    /// Emits a nested TypeConverter and System.Text.Json converter when serialization is opted in.
+    /// Both delegate the underlying value to the aliased type's own serializer and construct a fresh
+    /// instance, so they work for every newtype form including readonly structs.
+    /// </summary>
+    private void AppendSerializationConverters()
+    {
+        if (!_model.EmitSerialization)
+            return;
+
+        var indent = GetMemberIndent();
+        var inner = indent + "    ";
+        var body = indent + "        ";
+        var t = _model.AliasedTypeFullName;
+        var name = _model.TypeName;
+        var minimal = _model.AliasedTypeMinimalName;
+
+        _sb.AppendLine($"{indent}#region Serialization");
+        _sb.AppendLine();
+
+        // TypeConverter — covers Newtonsoft.Json, ASP.NET model binding, configuration binding, etc.
+        _sb.AppendLine($"{indent}/// <summary>Converts {name} to and from {minimal} and string.</summary>");
+        _sb.AppendLine($"{indent}public sealed class NewtypeTypeConverter : global::System.ComponentModel.TypeConverter");
+        _sb.AppendLine($"{indent}{{");
+        _sb.AppendLine($"{inner}/// <inheritdoc/>");
+        _sb.AppendLine($"{inner}public override bool CanConvertFrom(global::System.ComponentModel.ITypeDescriptorContext? context, global::System.Type sourceType)");
+        _sb.AppendLine($"{body}=> sourceType == typeof(string) || sourceType == typeof({t}) || base.CanConvertFrom(context, sourceType);");
+        _sb.AppendLine();
+        _sb.AppendLine($"{inner}/// <inheritdoc/>");
+        _sb.AppendLine($"{inner}public override bool CanConvertTo(global::System.ComponentModel.ITypeDescriptorContext? context, global::System.Type? destinationType)");
+        _sb.AppendLine($"{body}=> destinationType == typeof(string) || destinationType == typeof({t}) || base.CanConvertTo(context, destinationType);");
+        _sb.AppendLine();
+        _sb.AppendLine($"{inner}/// <inheritdoc/>");
+        _sb.AppendLine($"{inner}public override object? ConvertFrom(global::System.ComponentModel.ITypeDescriptorContext? context, global::System.Globalization.CultureInfo? culture, object value)");
+        _sb.AppendLine($"{inner}{{");
+        _sb.AppendLine($"{body}if (value is {t} unwrapped) return new {name}(unwrapped);");
+        _sb.AppendLine($"{body}if (value is string text)");
+        _sb.AppendLine($"{body}{{");
+        _sb.AppendLine($"{body}    var converted = global::System.ComponentModel.TypeDescriptor.GetConverter(typeof({t})).ConvertFromString(context, culture, text);");
+        _sb.AppendLine($"{body}    if (converted is null) return null;");
+        _sb.AppendLine($"{body}    return new {name}(({t})converted);");
+        _sb.AppendLine($"{body}}}");
+        _sb.AppendLine($"{body}return base.ConvertFrom(context, culture, value);");
+        _sb.AppendLine($"{inner}}}");
+        _sb.AppendLine();
+        _sb.AppendLine($"{inner}/// <inheritdoc/>");
+        _sb.AppendLine($"{inner}public override object? ConvertTo(global::System.ComponentModel.ITypeDescriptorContext? context, global::System.Globalization.CultureInfo? culture, object? value, global::System.Type destinationType)");
+        _sb.AppendLine($"{inner}{{");
+        _sb.AppendLine($"{body}if (value is {name} wrapped)");
+        _sb.AppendLine($"{body}{{");
+        _sb.AppendLine($"{body}    if (destinationType == typeof({t})) return wrapped._value;");
+        _sb.AppendLine($"{body}    if (destinationType == typeof(string)) return global::System.ComponentModel.TypeDescriptor.GetConverter(typeof({t})).ConvertToString(context, culture, wrapped._value);");
+        _sb.AppendLine($"{body}}}");
+        _sb.AppendLine($"{body}return base.ConvertTo(context, culture, value, destinationType);");
+        _sb.AppendLine($"{inner}}}");
+        _sb.AppendLine($"{indent}}}");
+        _sb.AppendLine();
+
+        // System.Text.Json converter — serializes as the underlying value.
+        _sb.AppendLine($"{indent}/// <summary>Serializes {name} as its underlying {minimal} for System.Text.Json.</summary>");
+        _sb.AppendLine($"{indent}public sealed class NewtypeJsonConverter : global::System.Text.Json.Serialization.JsonConverter<{name}>");
+        _sb.AppendLine($"{indent}{{");
+        _sb.AppendLine($"{inner}/// <inheritdoc/>");
+        _sb.AppendLine($"{inner}public override {name} Read(ref global::System.Text.Json.Utf8JsonReader reader, global::System.Type typeToConvert, global::System.Text.Json.JsonSerializerOptions options)");
+        _sb.AppendLine($"{body}=> new {name}(global::System.Text.Json.JsonSerializer.Deserialize<{t}>(ref reader, options)!);");
+        _sb.AppendLine();
+        _sb.AppendLine($"{inner}/// <inheritdoc/>");
+        _sb.AppendLine($"{inner}public override void Write(global::System.Text.Json.Utf8JsonWriter writer, {name} value, global::System.Text.Json.JsonSerializerOptions options)");
+        _sb.AppendLine($"{body}=> global::System.Text.Json.JsonSerializer.Serialize(writer, value._value, options);");
+        _sb.AppendLine($"{indent}}}");
+        _sb.AppendLine();
+
+        _sb.AppendLine($"{indent}#endregion");
         _sb.AppendLine();
     }
 

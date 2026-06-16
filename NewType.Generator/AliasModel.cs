@@ -40,6 +40,7 @@ internal readonly record struct AliasModel(
     bool SuppressImplicitWrap,
     bool SuppressImplicitUnwrap,
     bool SuppressConstructorForwarding,
+    bool EmitSerialization,
     int MethodImplValue,
 
     // Members
